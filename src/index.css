@@ -368,6 +368,64 @@ body {
   color: var(--on-primary);
 }
 
+.list-item-container {
+  display: flex;
+  align-items: center;
+  margin: 4px 8px;
+  border-radius: 12px;
+  transition: background-color 0.2s;
+}
+
+.list-item-container:hover {
+  background-color: rgba(0,0,0,0.03);
+}
+
+.list-item-container.active {
+  background-color: var(--primary);
+}
+
+.list-item-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  flex: 1;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--on-background);
+  cursor: pointer;
+  min-width: 0;
+}
+
+.list-item-container.active .list-item-btn {
+  font-weight: 700;
+}
+
+.list-delete-btn {
+  background: none;
+  border: none;
+  color: var(--on-primary);
+  opacity: 0.2;
+  cursor: pointer;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.list-item-container:hover .list-delete-btn {
+  opacity: 0.5;
+}
+
+.list-delete-btn:hover {
+  opacity: 1 !important;
+  color: var(--priority-high);
+}
+
 .list-item {
   display: flex;
   align-items: center;
@@ -383,11 +441,6 @@ body {
   cursor: pointer;
   border-radius: 12px;
   margin: 4px 8px;
-}
-
-.list-item.active {
-  background-color: var(--primary);
-  font-weight: 700;
 }
 
 /* Login Page */

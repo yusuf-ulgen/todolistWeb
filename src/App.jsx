@@ -3,7 +3,7 @@ import {
   auth, db, googleProvider 
 } from './firebase';
 import { 
-  signInWithPopup, onAuthStateChanged, signOut 
+  signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut 
 } from 'firebase/auth';
 import { 
   collection, query, where, onSnapshot, addDoc, 
@@ -47,6 +47,18 @@ export default function App() {
 
   // Auth State
   useEffect(() => {
+    // Handle redirect result
+    getRedirectResult(auth).then((result) => {
+      if (result?.user) {
+        showToast("Giriş yapıldı", "success");
+      }
+    }).catch((error) => {
+      console.error(error);
+      if (error.code !== 'auth/cancelled-At-con-page') {
+        showToast("Giriş başarısız", "error");
+      }
+    });
+
     return onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
@@ -92,10 +104,9 @@ export default function App() {
 
   const login = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
-      showToast("Giriş yapıldı", "success");
+      await signInWithRedirect(auth, googleProvider);
     } catch (err) {
-      showToast("Giriş başarısız", "error");
+      showToast("Giriş başlatılamadı", "error");
     }
   };
 
@@ -112,7 +123,11 @@ export default function App() {
       // Ensure user doc exists
       await setDoc(doc(db, 'users', user.uid), { lastActive: new Date() }, { merge: true });
 
+      const tasksRef = collection(db, 'users', user.uid, 'tasks');
+      const newTaskRef = doc(tasksRef);
+      
       const newTask = {
+        id: newTaskRef.id,
         userId: user.uid,
         content: newTaskContent,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -124,7 +139,7 @@ export default function App() {
         weekday: activeTab === 'weekly' ? selectedDay : null
       };
 
-      await addDoc(collection(db, 'users', user.uid, 'tasks'), newTask);
+      await setDoc(newTaskRef, newTask);
       setNewTaskContent('');
       setIsAdding(false);
       showToast("Görev eklendi", "success");
@@ -173,6 +188,31 @@ export default function App() {
       showToast("Silme hatası", "error");
     }
   };
+
+  const handleDeleteList = async (listId, e) => {
+    e.stopPropagation();
+    if (listId === 'default') return;
+    if (!window.confirm("Bu listeyi ve içindeki tüm görevleri silmek istediğinize emin misiniz?")) return;
+
+    try {
+      // 1. Delete associated tasks
+      const tasksToDelete = tasks.filter(t => t.listId === listId);
+      for (const task of tasksToDelete) {
+        await deleteDoc(doc(db, 'users', user.uid, 'tasks', task.id));
+      }
+      
+      // 2. Delete the list
+      await deleteDoc(doc(db, 'users', user.uid, 'lists', listId));
+      
+      if (currentListId === listId) {
+        setCurrentListId('default');
+      }
+      showToast("Liste silindi");
+    } catch (err) {
+      showToast("Liste silme hatası", "error");
+    }
+  };
+
 
   if (loading) return null;
 
@@ -243,14 +283,20 @@ export default function App() {
               </div>
               <div style={{ padding: '8px', flex: 1, overflowY: 'auto' }}>
                 {lists.map(list => (
-                  <button 
-                    key={list.id} 
-                    className={`list-item ${currentListId === list.id ? 'active' : ''}`}
-                    onClick={() => { setCurrentListId(list.id); setSidebarOpen(false); }}
-                  >
-                    <ListTodo size={18} />
-                    {list.name}
-                  </button>
+                  <div key={list.id} className={`list-item-container ${currentListId === list.id ? 'active' : ''}`}>
+                    <button 
+                      className="list-item-btn"
+                      onClick={() => { setCurrentListId(list.id); setSidebarOpen(false); }}
+                    >
+                      <ListTodo size={18} />
+                      <span style={{ flex: 1 }}>{list.name}</span>
+                    </button>
+                    {list.id !== 'default' && (
+                      <button className="list-delete-btn" onClick={(e) => handleDeleteList(list.id, e)}>
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 ))}
                 
                 <button className="list-item" onClick={() => setIsAddingList(true)} style={{ color: 'var(--accent)', marginTop: 8 }}>
