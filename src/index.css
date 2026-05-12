@@ -488,6 +488,94 @@ body {
   border-radius: 10px;
 }
 
+/* Confirm Modal */
+.confirm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 20px;
+}
+
+.confirm-modal {
+  background: white;
+  padding: 32px;
+  border-radius: 28px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  border: 1px solid var(--primary);
+}
+
+.confirm-icon-container {
+  width: 64px;
+  height: 64px;
+  background-color: #FFF0F0;
+  color: #F44336;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.confirm-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--on-primary);
+  margin-bottom: 12px;
+}
+
+.confirm-message {
+  font-size: 15px;
+  color: var(--gray);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.confirm-btn-cancel {
+  flex: 1;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--primary);
+  background: white;
+  color: var(--on-primary);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.confirm-btn-cancel:hover {
+  background-color: var(--background);
+}
+
+.confirm-btn-delete {
+  flex: 1;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  background-color: #F44336;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+  transition: opacity 0.2s;
+}
+
+.confirm-btn-delete:hover {
+  opacity: 0.9;
+}
+
 /* Add Task Dialog */
 .add-dialog-overlay {
   position: fixed;

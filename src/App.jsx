@@ -36,6 +36,7 @@ export default function App() {
   const [isAddingList, setIsAddingList] = useState(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [listToDelete, setListToDelete] = useState(null);
 
   const showToast = (message, type = 'info') => {
     const id = Date.now();
@@ -189,10 +190,16 @@ export default function App() {
     }
   };
 
-  const handleDeleteList = async (listId, e) => {
+  const handleDeleteList = (listId, e) => {
     e.stopPropagation();
     if (listId === 'default') return;
-    if (!window.confirm("Bu listeyi ve içindeki tüm görevleri silmek istediğinize emin misiniz?")) return;
+    const list = lists.find(l => l.id === listId);
+    setListToDelete(list);
+  };
+
+  const confirmDeleteList = async () => {
+    if (!listToDelete) return;
+    const listId = listToDelete.id;
 
     try {
       // 1. Delete associated tasks
@@ -208,8 +215,10 @@ export default function App() {
         setCurrentListId('default');
       }
       showToast("Liste silindi");
+      setListToDelete(null);
     } catch (err) {
       showToast("Liste silme hatası", "error");
+      setListToDelete(null);
     }
   };
 
@@ -499,6 +508,33 @@ export default function App() {
                 <StatCard label="Tamamlanan" value={completedCount} icon={<CheckCircle2 size={24} />} color="#00BFA5" />
                 <StatCard label="Bekleyen" value={tasks.length - completedCount} icon={<Clock size={24} />} color="#FF9800" />
                 <StatCard label="Verimlilik" value={tasks.length > 0 ? `%${Math.round((completedCount/tasks.length)*100)}` : '%0'} icon={<BarChart2 size={24} />} color="#4CAF50" />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Custom Confirm Modal */}
+      <AnimatePresence>
+        {listToDelete && (
+          <div className="confirm-modal-overlay" onClick={() => setListToDelete(null)}>
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="confirm-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="confirm-icon-container">
+                <Trash2 size={32} />
+              </div>
+              <h2 className="confirm-title">Listeyi Sil?</h2>
+              <p className="confirm-message">
+                <strong>"{listToDelete.name}"</strong> listesini ve içindeki tüm görevleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+              </p>
+              <div className="confirm-actions">
+                <button className="confirm-btn-cancel" onClick={() => setListToDelete(null)}>Vazgeç</button>
+                <button className="confirm-btn-delete" onClick={confirmDeleteList}>Evet, Sil</button>
               </div>
             </motion.div>
           </div>
