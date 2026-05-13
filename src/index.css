@@ -269,9 +269,7 @@ body {
 .task-text {
   font-size: 16px;
   font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .task-text.checked {
@@ -472,8 +470,121 @@ body {
   width: 100%;
   font-weight: 700;
   cursor: pointer;
-  margin-top: 24px;
+  margin-top: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.login-btn:hover {
+  opacity: 0.9;
+}
+
+.login-btn:active {
+  transform: scale(0.98);
+}
+
+.login-btn.secondary {
+  background-color: white;
+  color: var(--on-primary);
+  border: 1px solid var(--primary);
+  box-shadow: none;
+}
+
+.login-btn.google {
+  background-color: #fff;
+  color: #757575;
+  border: 1px solid #ddd;
+  margin-top: 24px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+  text-align: left;
+}
+
+.auth-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-input {
+  background-color: var(--background);
+  border: 1px solid var(--primary);
+  padding: 14px 16px;
+  border-radius: 14px;
+  font-size: 15px;
+  color: var(--on-primary);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.auth-input:-webkit-autofill,
+.auth-input:-webkit-autofill:hover,
+.auth-input:-webkit-autofill:focus,
+.auth-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px var(--background) inset !important;
+  -webkit-text-fill-color: var(--on-primary) !important;
+}
+
+.auth-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(0, 191, 165, 0.1);
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray);
+  margin: 4px 0;
+  user-select: none;
+}
+
+.remember-me input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.auth-switch {
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--gray);
+}
+
+.auth-switch span {
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+.auth-back {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--gray);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 16px;
+  width: fit-content;
+}
+
+.auth-back:hover {
+  color: var(--on-primary);
 }
 
 /* Scrollbar */
