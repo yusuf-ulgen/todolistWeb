@@ -436,7 +436,11 @@ export default function App() {
                 </button>
               </div>
               <div style={{ padding: '8px', flex: 1, overflowY: 'auto' }}>
-                {lists.map(list => (
+                {[...lists].sort((a, b) => {
+                  if (a.id === 'default') return -1;
+                  if (b.id === 'default') return 1;
+                  return (a.sortOrder || 0) - (b.sortOrder || 0);
+                }).map(list => (
                   <div key={list.id} className={`list-item-container ${currentListId === list.id ? 'active' : ''}`}>
                     <button
                       className="list-item-btn"
