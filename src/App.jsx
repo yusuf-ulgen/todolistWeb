@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  auth, db, googleProvider 
+import {
+  auth, db, googleProvider
 } from './firebase';
-import { 
-  signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut 
+import {
+  signInWithPopup, onAuthStateChanged, signOut
 } from 'firebase/auth';
-import { 
-  collection, query, where, onSnapshot, addDoc, 
-  updateDoc, deleteDoc, doc, setDoc, orderBy 
+import {
+  collection, query, where, onSnapshot, addDoc,
+  updateDoc, deleteDoc, doc, setDoc, orderBy
 } from 'firebase/firestore';
-import { 
-  CheckCircle2, Circle, Pin, Trash2, 
-  Plus, LogOut, Search, Menu, X, ListTodo, 
+import {
+  CheckCircle2, Circle, Pin, Trash2,
+  Plus, LogOut, Search, Menu, X, ListTodo,
   Clock, BarChart2, ChevronRight, User as UserIcon,
   Calendar, Info, PlusCircle, AlertCircle, Check
 } from 'lucide-react';
@@ -48,17 +48,6 @@ export default function App() {
 
   // Auth State
   useEffect(() => {
-    // Handle redirect result
-    getRedirectResult(auth).then((result) => {
-      if (result?.user) {
-        showToast("Giriş yapıldı", "success");
-      }
-    }).catch((error) => {
-      console.error(error);
-      if (error.code !== 'auth/cancelled-At-con-page') {
-        showToast("Giriş başarısız", "error");
-      }
-    });
 
     return onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -105,9 +94,13 @@ export default function App() {
 
   const login = async () => {
     try {
-      await signInWithRedirect(auth, googleProvider);
+      await signInWithPopup(auth, googleProvider);
+      showToast("Giriş yapıldı", "success");
     } catch (err) {
-      showToast("Giriş başlatılamadı", "error");
+      console.error(err);
+      if (err.code !== 'auth/popup-closed-by-user') {
+        showToast("Giriş başarısız", "error");
+      }
     }
   };
 
@@ -119,14 +112,14 @@ export default function App() {
   const addTask = async (e) => {
     if (e) e.preventDefault();
     if (!newTaskContent.trim() || !user) return;
-    
+
     try {
       // Ensure user doc exists
       await setDoc(doc(db, 'users', user.uid), { lastActive: new Date() }, { merge: true });
 
       const tasksRef = collection(db, 'users', user.uid, 'tasks');
       const newTaskRef = doc(tasksRef);
-      
+
       const newTask = {
         id: newTaskRef.id,
         userId: user.uid,
@@ -156,7 +149,7 @@ export default function App() {
 
     try {
       await setDoc(doc(db, 'users', user.uid), { lastActive: new Date() }, { merge: true });
-      
+
       await addDoc(collection(db, 'users', user.uid, 'lists'), {
         userId: user.uid,
         name: newListName,
@@ -207,10 +200,10 @@ export default function App() {
       for (const task of tasksToDelete) {
         await deleteDoc(doc(db, 'users', user.uid, 'tasks', task.id));
       }
-      
+
       // 2. Delete the list
       await deleteDoc(doc(db, 'users', user.uid, 'lists', listId));
-      
+
       if (currentListId === listId) {
         setCurrentListId('default');
       }
@@ -238,7 +231,7 @@ export default function App() {
     </div>
   );
 
-  const filteredTasks = tasks.filter(t => 
+  const filteredTasks = tasks.filter(t =>
     t.content.toLowerCase().includes(searchQuery.toLowerCase()) &&
     (activeTab === 'daily' ? (t.weekday === null) : (t.weekday === selectedDay))
   );
@@ -248,12 +241,12 @@ export default function App() {
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      
+
       {/* Toast Container */}
       <div className="toast-container">
         <AnimatePresence>
           {toasts.map(toast => (
-            <motion.div 
+            <motion.div
               key={toast.id}
               initial={{ opacity: 0, y: -20, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -271,14 +264,14 @@ export default function App() {
       <AnimatePresence>
         {isSidebarOpen && (
           <>
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="drawer-overlay" 
-              onClick={() => setSidebarOpen(false)} 
+              className="drawer-overlay"
+              onClick={() => setSidebarOpen(false)}
             />
-            <motion.aside 
+            <motion.aside
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
@@ -293,7 +286,7 @@ export default function App() {
               <div style={{ padding: '8px', flex: 1, overflowY: 'auto' }}>
                 {lists.map(list => (
                   <div key={list.id} className={`list-item-container ${currentListId === list.id ? 'active' : ''}`}>
-                    <button 
+                    <button
                       className="list-item-btn"
                       onClick={() => { setCurrentListId(list.id); setSidebarOpen(false); }}
                     >
@@ -307,7 +300,7 @@ export default function App() {
                     )}
                   </div>
                 ))}
-                
+
                 <button className="list-item" onClick={() => setIsAddingList(true)} style={{ color: 'var(--accent)', marginTop: 8 }}>
                   <PlusCircle size={18} />
                   Yeni Liste Ekle
@@ -321,7 +314,7 @@ export default function App() {
                     <p style={{ fontSize: 10, color: 'var(--gray)', margin: 0 }}>{user.email}</p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={logout}
                   style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#F44336', border: 'none', background: 'none', fontWeight: 700, cursor: 'pointer' }}
                 >
@@ -363,8 +356,8 @@ export default function App() {
             {activeTab === 'weekly' && (
               <div className="days-selector">
                 {SHORT_DAYS.map((day, idx) => (
-                  <button 
-                    key={day} 
+                  <button
+                    key={day}
                     className={`day-btn ${selectedDay === idx + 1 ? 'active' : ''}`}
                     onClick={() => setSelectedDay(idx + 1)}
                   >
@@ -380,9 +373,9 @@ export default function App() {
         <div className="search-container">
           <div className="search-box">
             <Search size={18} color="rgba(62, 39, 35, 0.5)" />
-            <input 
-              className="search-input" 
-              placeholder="Görevlerde ara..." 
+            <input
+              className="search-input"
+              placeholder="Görevlerde ara..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -393,8 +386,8 @@ export default function App() {
       {/* Main Content */}
       <main className="main-content">
         <div className="stat-text">
-          {currentListId === 'default' 
-            ? (activeTab === 'daily' ? `Bugünün görevleri ${completedCount}/${tasks.filter(t => t.weekday === null).length}` : `${DAYS[selectedDay-1]} - Görevler`)
+          {currentListId === 'default'
+            ? (activeTab === 'daily' ? `Bugünün görevleri ${completedCount}/${tasks.filter(t => t.weekday === null).length}` : `${DAYS[selectedDay - 1]} - Görevler`)
             : `${currentListName} - Toplam ${tasks.length} Görev`
           }
         </div>
@@ -428,7 +421,7 @@ export default function App() {
       <AnimatePresence>
         {isAdding && (
           <div className="add-dialog-overlay" onClick={() => setIsAdding(false)}>
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -436,14 +429,14 @@ export default function App() {
               onClick={(e) => e.stopPropagation()}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--on-primary)' }}>Yeni Görev {activeTab === 'weekly' && `(${SHORT_DAYS[selectedDay-1]})`}</h2>
+                <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--on-primary)' }}>Yeni Görev {activeTab === 'weekly' && `(${SHORT_DAYS[selectedDay - 1]})`}</h2>
                 <button className="toolbar-button" onClick={() => setIsAdding(false)}><X size={20} /></button>
               </div>
               <form onSubmit={addTask} style={{ display: 'flex', gap: 12 }}>
-                <input 
-                  autoFocus 
-                  className="add-input" 
-                  placeholder="Görev metni..." 
+                <input
+                  autoFocus
+                  className="add-input"
+                  placeholder="Görev metni..."
                   value={newTaskContent}
                   onChange={(e) => setNewTaskContent(e.target.value)}
                 />
@@ -460,7 +453,7 @@ export default function App() {
       <AnimatePresence>
         {isAddingList && (
           <div className="add-dialog-overlay" onClick={() => setIsAddingList(false)}>
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -472,10 +465,10 @@ export default function App() {
                 <button className="toolbar-button" onClick={() => setIsAddingList(false)}><X size={20} /></button>
               </div>
               <form onSubmit={handleAddList} style={{ display: 'flex', gap: 12 }}>
-                <input 
-                  autoFocus 
-                  className="add-input" 
-                  placeholder="Liste adı..." 
+                <input
+                  autoFocus
+                  className="add-input"
+                  placeholder="Liste adı..."
                   value={newListName}
                   onChange={(e) => setNewListName(e.target.value)}
                 />
@@ -492,7 +485,7 @@ export default function App() {
       <AnimatePresence>
         {isStatsOpen && (
           <div className="add-dialog-overlay" onClick={() => setIsStatsOpen(false)}>
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -507,7 +500,7 @@ export default function App() {
                 <StatCard label="Toplam Görev" value={tasks.length} icon={<ListTodo size={24} />} color="#E6D5C3" />
                 <StatCard label="Tamamlanan" value={completedCount} icon={<CheckCircle2 size={24} />} color="#00BFA5" />
                 <StatCard label="Bekleyen" value={tasks.length - completedCount} icon={<Clock size={24} />} color="#FF9800" />
-                <StatCard label="Verimlilik" value={tasks.length > 0 ? `%${Math.round((completedCount/tasks.length)*100)}` : '%0'} icon={<BarChart2 size={24} />} color="#4CAF50" />
+                <StatCard label="Verimlilik" value={tasks.length > 0 ? `%${Math.round((completedCount / tasks.length) * 100)}` : '%0'} icon={<BarChart2 size={24} />} color="#4CAF50" />
               </div>
             </motion.div>
           </div>
@@ -518,7 +511,7 @@ export default function App() {
       <AnimatePresence>
         {listToDelete && (
           <div className="confirm-modal-overlay" onClick={() => setListToDelete(null)}>
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -547,19 +540,19 @@ export default function App() {
 
 function TaskCard({ task, index, onToggle, onDelete }) {
   return (
-    <motion.div 
+    <motion.div
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       className="task-card"
     >
-      <div 
-        className="priority-bar" 
-        style={{ backgroundColor: task.priority === 2 ? 'var(--priority-high)' : task.priority === 1 ? 'var(--priority-medium)' : 'var(--priority-low)' }} 
+      <div
+        className="priority-bar"
+        style={{ backgroundColor: task.priority === 2 ? 'var(--priority-high)' : task.priority === 1 ? 'var(--priority-medium)' : 'var(--priority-low)' }}
       />
       <span className="task-number">{index + 1}</span>
-      
+
       <div className="checkbox-container" onClick={() => onToggle(task)}>
         {task.isChecked ? (
           <CheckCircle2 size={24} color="var(--accent)" />
@@ -575,7 +568,7 @@ function TaskCard({ task, index, onToggle, onDelete }) {
       </div>
 
       <span className="task-time">{task.time}</span>
-      
+
       <button className="delete-btn" onClick={() => onDelete(task.id)}>
         <Trash2 size={18} />
       </button>
