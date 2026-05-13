@@ -10,7 +10,7 @@ import {
   LogIn, UserPlus, ChevronLeft, Mail, Lock
 } from 'lucide-react';
 import { 
-  signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut,
+  signInWithPopup, onAuthStateChanged, signOut,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   setPersistence, browserSessionPersistence, browserLocalPersistence
 } from 'firebase/auth';
@@ -58,7 +58,6 @@ export default function App() {
 
   // Auth State
   useEffect(() => {
-    getRedirectResult(auth).catch(console.error);
     return onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
@@ -105,9 +104,13 @@ export default function App() {
   const loginWithGoogle = async () => {
     try {
       await setPersistence(auth, browserLocalPersistence);
-      await signInWithRedirect(auth, googleProvider);
+      await signInWithPopup(auth, googleProvider);
+      showToast("Giriş yapıldı", "success");
     } catch (err) {
-      showToast("Giriş başlatılamadı", "error");
+      console.error(err);
+      if (err.code !== 'auth/popup-closed-by-user') {
+        showToast("Giriş başlatılamadı", "error");
+      }
     }
   };
 
