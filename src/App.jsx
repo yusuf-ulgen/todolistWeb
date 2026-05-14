@@ -55,6 +55,7 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [authLoading, setAuthLoading] = useState(false);
+  const [isAuthAction, setIsAuthAction] = useState(false);
 
   const showToast = (message, type = 'info') => {
     const id = Date.now();
@@ -171,6 +172,7 @@ export default function App() {
 
   const loginWithGoogle = async () => {
     try {
+      setAuthLoading(true);
       await setPersistence(auth, browserLocalPersistence);
       await signInWithPopup(auth, googleProvider);
       showToast("Giriş yapıldı", "success");
@@ -179,44 +181,57 @@ export default function App() {
       if (err.code !== 'auth/popup-closed-by-user') {
         showToast("Giriş başlatılamadı", "error");
       }
+    } finally {
+      setAuthLoading(false);
     }
   };
 
   const handleEmailSignUp = async (e) => {
     if (e) e.preventDefault();
-    if (!email || !password) return showToast("Lütfen tüm alanları doldurun", "error");
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) return showToast("Lütfen tüm alanları doldurun", "error");
     
     setAuthLoading(true);
+    setIsAuthAction(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      await createUserWithEmailAndPassword(auth, trimmedEmail, password);
       await signOut(auth); // Force manual login after registration
       showToast("Kayıt başarılı! Şimdi giriş yapabilirsiniz.", "success");
       setAuthScreen('login');
-      setAuthLoading(false);
+      // Keep password so user can just click "Giriş Yap"
     } catch (err) {
       console.error(err);
       let msg = "Kayıt başarısız";
       if (err.code === 'auth/email-already-in-use') msg = "Bu e-posta zaten kullanımda";
-      if (err.code === 'auth/weak-password') msg = "Şifre en az 6 karakter olmalıdır";
+      else if (err.code === 'auth/weak-password') msg = "Şifre en az 6 karakter olmalıdır";
+      else if (err.code === 'auth/invalid-email') msg = "Geçersiz e-posta adresi";
+      else msg = `Hata: ${err.code}`;
       showToast(msg, "error");
+    } finally {
       setAuthLoading(false);
+      setIsAuthAction(false);
     }
   };
 
   const handleEmailLogin = async (e) => {
     if (e) e.preventDefault();
-    if (!email || !password) return showToast("Lütfen tüm alanları doldurun", "error");
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) return showToast("Lütfen tüm alanları doldurun", "error");
 
     setAuthLoading(true);
     try {
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, trimmedEmail, password);
       showToast("Başarıyla giriş yapıldı", "success");
     } catch (err) {
       console.error(err);
       let msg = "Giriş başarısız";
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential' || err.code === 'auth/user-disabled') {
         msg = "E-posta veya şifre hatalı";
+      } else if (err.code === 'auth/too-many-requests') {
+        msg = "Çok fazla başarısız deneme. Lütfen daha sonra tekrar deneyin.";
+      } else {
+        msg = `Giriş Hatası: ${err.code}`;
       }
       showToast(msg, "error");
     } finally {
@@ -445,119 +460,6 @@ export default function App() {
 
   if (loading) return null;
 
-  if (!user) return (
-    <div className="login-container">
-      <motion.div 
-        key={authScreen}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="login-card"
-      >
-        {authScreen !== 'landing' && (
-          <div className="auth-back" onClick={() => { setAuthScreen('landing'); setEmail(''); setPassword(''); }}>
-            <ChevronLeft size={18} /> Geri Dön
-          </div>
-        )}
-
-        <div style={{ backgroundColor: 'var(--primary)', width: 80, height: 80, borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-          <ListTodo size={40} color="var(--on-primary)" />
-        </div>
-        
-        <h1 style={{ fontSize: 32, marginBottom: 8 }}>Todolist</h1>
-        <p style={{ color: 'var(--gray)' }}>Görevlerini tüm cihazlarında eşitle.</p>
-
-        {authScreen === 'landing' && (
-          <div style={{ marginTop: 32 }}>
-            <button className="login-btn" onClick={() => { setAuthScreen('login'); setEmail(''); setPassword(''); }}>
-              <LogIn size={20} /> Giriş Yap
-            </button>
-            <button className="login-btn secondary" onClick={() => { setAuthScreen('signup'); setEmail(''); setPassword(''); }}>
-              <UserPlus size={20} /> Kayıt Ol
-            </button>
-            <button className="login-btn google" onClick={loginWithGoogle}>
-              Google ile Devam Et
-            </button>
-          </div>
-        )}
-
-        {authScreen === 'login' && (
-          <form className="auth-form" onSubmit={handleEmailLogin} autoComplete="off">
-            <div className="auth-input-group">
-              <input 
-                type="email" 
-                className="auth-input" 
-                placeholder="E-posta" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="off"
-              />
-            </div>
-            <div className="auth-input-group">
-              <input 
-                type="password" 
-                className="auth-input" 
-                placeholder="Şifre" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="new-password"
-              />
-            </div>
-            <label className="remember-me">
-              <input 
-                type="checkbox" 
-                checked={rememberMe} 
-                onChange={(e) => setRememberMe(e.target.checked)} 
-              />
-              Beni Hatırla
-            </label>
-            <button className="login-btn" type="submit" disabled={authLoading}>
-              {authLoading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
-            </button>
-            <div className="auth-switch">
-              Hesabınız yok mu? <span onClick={() => { setAuthScreen('signup'); setEmail(''); setPassword(''); }}>Kayıt Ol</span>
-            </div>
-          </form>
-        )}
-
-        {authScreen === 'signup' && (
-          <form className="auth-form" onSubmit={handleEmailSignUp} autoComplete="off">
-            <div className="auth-input-group">
-              <input 
-                type="email" 
-                className="auth-input" 
-                placeholder="E-posta" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="off"
-              />
-            </div>
-            <div className="auth-input-group">
-              <input 
-                type="password" 
-                className="auth-input" 
-                placeholder="Şifre (En az 6 karakter)" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                autoComplete="new-password"
-              />
-            </div>
-            <button className="login-btn" type="submit" disabled={authLoading}>
-              {authLoading ? 'Hesap Oluşturuluyor...' : 'Kayıt Ol'}
-            </button>
-            <div className="auth-switch">
-              Zaten hesabınız var mı? <span onClick={() => { setAuthScreen('login'); setEmail(''); setPassword(''); }}>Giriş Yap</span>
-            </div>
-          </form>
-        )}
-      </motion.div>
-    </div>
-  );
-
   const filteredTasks = tasks.filter(t =>
     t.content.toLowerCase().includes(searchQuery.toLowerCase()) &&
     (currentListId !== 'default' || (activeTab === 'daily' ? (t.weekday === null) : (t.weekday === selectedDay)))
@@ -569,7 +471,7 @@ export default function App() {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Toast Container */}
+      {/* Toast Container - Moved outside to be always available */}
       <div className="toast-container">
         <AnimatePresence>
           {toasts.map(toast => (
@@ -586,6 +488,120 @@ export default function App() {
           ))}
         </AnimatePresence>
       </div>
+
+      {!user || isAuthAction ? (
+        <div className="login-container">
+          <motion.div 
+            key={authScreen}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="login-card"
+          >
+            {authScreen !== 'landing' && (
+              <div className="auth-back" onClick={() => { setAuthScreen('landing'); setEmail(''); setPassword(''); }}>
+                <ChevronLeft size={18} /> Geri Dön
+              </div>
+            )}
+
+            <div style={{ backgroundColor: 'var(--primary)', width: 80, height: 80, borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+              <ListTodo size={40} color="var(--on-primary)" />
+            </div>
+            
+            <h1 style={{ fontSize: 32, marginBottom: 8 }}>Todolist</h1>
+            <p style={{ color: 'var(--gray)' }}>Görevlerini tüm cihazlarında eşitle.</p>
+
+            {authScreen === 'landing' && (
+              <div style={{ marginTop: 32 }}>
+                <button className="login-btn" onClick={() => { setAuthScreen('login'); setEmail(''); setPassword(''); }}>
+                  <LogIn size={20} /> Giriş Yap
+                </button>
+                <button className="login-btn secondary" onClick={() => { setAuthScreen('signup'); setEmail(''); setPassword(''); }}>
+                  <UserPlus size={20} /> Kayıt Ol
+                </button>
+                <button className="login-btn google" onClick={loginWithGoogle}>
+                  Google ile Devam Et
+                </button>
+              </div>
+            )}
+
+            {authScreen === 'login' && (
+              <form className="auth-form" onSubmit={handleEmailLogin} autoComplete="off">
+                <div className="auth-input-group">
+                  <input 
+                    type="email" 
+                    className="auth-input" 
+                    placeholder="E-posta" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="auth-input-group">
+                  <input 
+                    type="password" 
+                    className="auth-input" 
+                    placeholder="Şifre" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="new-password"
+                  />
+                </div>
+                <label className="remember-me">
+                  <input 
+                    type="checkbox" 
+                    checked={rememberMe} 
+                    onChange={(e) => setRememberMe(e.target.checked)} 
+                  />
+                  Beni Hatırla
+                </label>
+                <button className="login-btn" type="submit" disabled={authLoading}>
+                  {authLoading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
+                </button>
+                <div className="auth-switch">
+                  Hesabınız yok mu? <span onClick={() => { setAuthScreen('signup'); setEmail(''); setPassword(''); }}>Kayıt Ol</span>
+                </div>
+              </form>
+            )}
+
+            {authScreen === 'signup' && (
+              <form className="auth-form" onSubmit={handleEmailSignUp} autoComplete="off">
+                <div className="auth-input-group">
+                  <input 
+                    type="email" 
+                    className="auth-input" 
+                    placeholder="E-posta" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="auth-input-group">
+                  <input 
+                    type="password" 
+                    className="auth-input" 
+                    placeholder="Şifre (En az 6 karakter)" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    autoComplete="new-password"
+                  />
+                </div>
+                <button className="login-btn" type="submit" disabled={authLoading}>
+                  {authLoading ? 'Hesap Oluşturuluyor...' : 'Kayıt Ol'}
+                </button>
+                <div className="auth-switch">
+                  Zaten hesabınız var mı? <span onClick={() => { setAuthScreen('login'); setEmail(''); setPassword(''); }}>Giriş Yap</span>
+                </div>
+              </form>
+            )}
+          </motion.div>
+        </div>
+      ) : (
+        <>
 
       {/* Sidebar / Drawer */}
       <AnimatePresence>
@@ -932,6 +948,8 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+        </>
+      )}
     </div>
   );
 }
