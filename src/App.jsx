@@ -72,6 +72,18 @@ export default function App() {
     });
   }, []);
 
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.altKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        setIsAdding(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Sync Lists
   useEffect(() => {
     if (!user) return;
@@ -726,20 +738,15 @@ export default function App() {
           >
             <AnimatePresence mode="popLayout">
               {filteredTasks.map((task, index) => (
-                <Reorder.Item 
-                  key={task.id} 
-                  value={task}
-                  dragListener={false} // Disable drag on the card
-                >
-                  <TaskCard 
-                    task={task} 
-                    index={index} 
-                    onToggle={toggleTask} 
-                    onDelete={handleDeleteTask}
-                    onTogglePin={togglePin}
-                    onEdit={handleEditTask}
-                  />
-                </Reorder.Item>
+                <ReorderItemWrapper 
+                  key={task.id}
+                  task={task}
+                  index={index}
+                  onToggle={toggleTask}
+                  onDelete={handleDeleteTask}
+                  onTogglePin={togglePin}
+                  onEdit={handleEditTask}
+                />
               ))}
             </AnimatePresence>
           </Reorder.Group>
@@ -753,7 +760,11 @@ export default function App() {
       </main>
 
       {/* FAB */}
-      <button className="fab" onClick={() => setIsAdding(true)}>
+      <button 
+        className="fab" 
+        onClick={() => setIsAdding(true)}
+        title="Yeni Görev Ekle (Alt + Z)"
+      >
         <Plus size={32} />
       </button>
 
@@ -775,12 +786,20 @@ export default function App() {
                 <button className="toolbar-button" onClick={() => { setIsAdding(false); setIsEditing(false); setEditingTask(null); setNewTaskContent(''); setNewTaskTime(''); }}><X size={20} /></button>
               </div>
               <form onSubmit={isEditing ? updateTask : addTask} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <input
+                <textarea
                   autoFocus
                   className="add-input"
                   placeholder="Görev metni..."
                   value={newTaskContent}
                   onChange={(e) => setNewTaskContent(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (isEditing) updateTask(e);
+                      else addTask(e);
+                    }
+                  }}
+                  style={{ minHeight: '100px', resize: 'vertical', fontFamily: 'inherit' }}
                 />
                 <div style={{ display: 'flex', gap: 12 }}>
                   <input
@@ -789,9 +808,10 @@ export default function App() {
                     style={{ flex: 'none', width: '130px' }}
                     value={newTaskTime}
                     onChange={(e) => setNewTaskTime(e.target.value)}
+                    title="Hatırlatma Saati"
                   />
                   <div style={{ flex: 1 }} />
-                  <button type="submit" className="add-submit">
+                  <button type="submit" className="add-submit" title={isEditing ? "Kaydet" : "Ekle"}>
                     {isEditing ? <Check size={24} /> : <Plus size={24} />}
                   </button>
                 </div>
@@ -916,9 +936,29 @@ export default function App() {
   );
 }
 
-function TaskCard({ task, index, onToggle, onDelete, onTogglePin, onEdit }) {
+function ReorderItemWrapper({ task, index, onToggle, onDelete, onTogglePin, onEdit }) {
   const dragControls = useDragControls();
 
+  return (
+    <Reorder.Item 
+      value={task}
+      dragListener={false}
+      dragControls={dragControls}
+    >
+      <TaskCard 
+        task={task} 
+        index={index} 
+        onToggle={onToggle} 
+        onDelete={onDelete}
+        onTogglePin={onTogglePin}
+        onEdit={onEdit}
+        dragControls={dragControls}
+      />
+    </Reorder.Item>
+  );
+}
+
+function TaskCard({ task, index, onToggle, onDelete, onTogglePin, onEdit, dragControls }) {
   return (
     <motion.div
       layout
@@ -934,11 +974,12 @@ function TaskCard({ task, index, onToggle, onDelete, onTogglePin, onEdit }) {
       <span 
         className="task-number"
         onPointerDown={(e) => dragControls.start(e)}
+        title="Taşımak için sürükleyin"
       >
         {index + 1}
       </span>
 
-      <div className="checkbox-container" onClick={() => onToggle(task)}>
+      <div className="checkbox-container" onClick={() => onToggle(task)} title={task.isChecked ? "Tamamlanmadı olarak işaretle" : "Tamamlandı olarak işaretle"}>
         {task.isChecked ? (
           <CheckCircle2 size={24} color="var(--accent)" />
         ) : (
@@ -952,11 +993,12 @@ function TaskCard({ task, index, onToggle, onDelete, onTogglePin, onEdit }) {
         </p>
       </div>
 
-      {task.time && <span className="task-time">{task.time}</span>}
+      {task.time && <span className="task-time" title="Hatırlatma Saati">{task.time}</span>}
 
       <button 
         className="edit-btn" 
         onClick={() => onEdit(task)}
+        title="Düzenle"
         style={{ background: 'none', border: 'none', color: 'var(--primary-variant)', cursor: 'pointer', padding: 4, opacity: 0.3, transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
         <PlusCircle size={18} style={{ transform: 'rotate(45deg)' }} />
@@ -965,12 +1007,12 @@ function TaskCard({ task, index, onToggle, onDelete, onTogglePin, onEdit }) {
       <button 
         className={`pin-btn ${task.isPinned ? 'active' : ''}`} 
         onClick={() => onTogglePin(task)}
-        title={task.isPinned ? "Pini Kaldır" : "Pinle"}
+        title={task.isPinned ? "Pini Kaldır" : "Pinle (Üste Sabitle)"}
       >
         <Pin size={18} fill={task.isPinned ? "currentColor" : "none"} />
       </button>
 
-      <button className="delete-btn" onClick={(e) => onDelete(task.id, e)}>
+      <button className="delete-btn" onClick={(e) => onDelete(task.id, e)} title="Sil">
         <Trash2 size={18} />
       </button>
     </motion.div>
