@@ -260,11 +260,7 @@ body {
   gap: 12px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   transition: transform 0.1s;
-  cursor: grab;
-}
-
-.task-card:active {
-  cursor: grabbing;
+  user-select: text; /* Allow text selection */
 }
 
 .priority-bar {
@@ -277,8 +273,19 @@ body {
   font-size: 14px;
   font-weight: 700;
   color: var(--primary-variant);
-  width: 20px;
-  text-align: center;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0,0,0,0.03);
+  border-radius: 6px;
+  cursor: grab;
+  user-select: none;
+}
+
+.task-number:active {
+  cursor: grabbing;
 }
 
 .checkbox-container {

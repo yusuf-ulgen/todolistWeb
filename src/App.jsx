@@ -45,6 +45,10 @@ export default function App() {
   const [newTaskTime, setNewTaskTime] = useState('');
   const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
   
+  // Edit Task States
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  
   // Auth Screen States
   const [authScreen, setAuthScreen] = useState('landing'); // 'landing', 'login', 'signup'
   const [email, setEmail] = useState('');
@@ -116,7 +120,10 @@ export default function App() {
       const currentTime = `${HH}:${mm}`;
       
       tasks.forEach(task => {
-        if (!task.isChecked && task.time === currentTime && !task.notified) {
+        // Check if day matches for weekly tasks
+        const isCorrectDay = task.weekday === null || task.weekday === (now.getDay() === 0 ? 7 : now.getDay());
+        
+        if (!task.isChecked && task.time === currentTime && !task.notified && isCorrectDay) {
           try {
             new Notification("Görev Hatırlatıcı", {
               body: task.content,
@@ -215,7 +222,6 @@ export default function App() {
     if (!newTaskContent.trim() || !user) return;
 
     try {
-      // Ensure user doc exists
       await setDoc(doc(db, 'users', user.uid), { lastActive: new Date() }, { merge: true });
 
       const tasksRef = collection(db, 'users', user.uid, 'tasks');
@@ -233,7 +239,8 @@ export default function App() {
         sortOrder: tasks.length,
         listId: currentListId,
         priority: 0,
-        weekday: activeTab === 'weekly' ? selectedDay : null
+        weekday: activeTab === 'weekly' ? selectedDay : null,
+        notified: false
       };
 
       await setDoc(newTaskRef, newTask);
@@ -242,7 +249,6 @@ export default function App() {
       setIsAdding(false);
       showToast("Görev eklendi", "success");
 
-      // Request notification permission if time is set
       if (newTaskTime && notificationPermission === 'default') {
         const permission = await Notification.requestPermission();
         setNotificationPermission(permission);
@@ -250,6 +256,40 @@ export default function App() {
     } catch (err) {
       console.error(err);
       showToast(`Hata: ${err.code || err.message}`, "error");
+    }
+  };
+
+  const handleEditTask = (task) => {
+    setEditingTask(task);
+    setNewTaskContent(task.content);
+    setNewTaskTime(task.time || '');
+    setIsEditing(true);
+  };
+
+  const updateTask = async (e) => {
+    if (e) e.preventDefault();
+    if (!newTaskContent.trim() || !user || !editingTask) return;
+
+    try {
+      const taskRef = doc(db, 'users', user.uid, 'tasks', editingTask.id);
+      
+      // If time changed, reset notified status
+      const timeChanged = newTaskTime !== editingTask.time;
+
+      await updateDoc(taskRef, {
+        content: newTaskContent,
+        time: newTaskTime,
+        notified: timeChanged ? false : (editingTask.notified || false)
+      });
+
+      setNewTaskContent('');
+      setNewTaskTime('');
+      setIsEditing(false);
+      setEditingTask(null);
+      showToast("Görev güncellendi", "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Güncelleme hatası", "error");
     }
   };
 
@@ -508,10 +548,10 @@ export default function App() {
 
   const filteredTasks = tasks.filter(t =>
     t.content.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    (activeTab === 'daily' ? (t.weekday === null) : (t.weekday === selectedDay))
+    (currentListId !== 'default' || (activeTab === 'daily' ? (t.weekday === null) : (t.weekday === selectedDay)))
   );
 
-  const completedCount = tasks.filter(t => t.isChecked).length;
+  const completedCount = filteredTasks.filter(t => t.isChecked).length;
   const currentListName = lists.find(l => l.id === currentListId)?.name || 'Liste';
 
   return (
@@ -674,23 +714,33 @@ export default function App() {
         </div>
 
         <div className="task-list">
-          <Reorder.Group axis="y" values={tasks} onReorder={handleReorderTasks} className="task-list-group">
+          <Reorder.Group 
+            axis="y" 
+            values={filteredTasks} 
+            onReorder={(newOrder) => {
+              // We need to maintain the original tasks array but update the order for the filtered ones
+              const otherTasks = tasks.filter(t => !filteredTasks.find(ft => ft.id === t.id));
+              handleReorderTasks([...newOrder, ...otherTasks]);
+            }} 
+            className="task-list-group"
+          >
             <AnimatePresence mode="popLayout">
-              {tasks
-                .filter(t => t.content.toLowerCase().includes(searchQuery.toLowerCase()))
-                .filter(t => currentListId !== 'default' || (activeTab === 'daily' ? t.weekday === null : t.weekday === selectedDay))
-                .map((task, index) => (
-                  <Reorder.Item key={task.id} value={task}>
-                    <TaskCard 
-                      task={task} 
-                      index={index} 
-                      onToggle={toggleTask} 
-                      onDelete={handleDeleteTask}
-                      onTogglePin={togglePin}
-                    />
-                  </Reorder.Item>
-                ))
-              }
+              {filteredTasks.map((task, index) => (
+                <Reorder.Item 
+                  key={task.id} 
+                  value={task}
+                  dragListener={false} // Disable drag on the card
+                >
+                  <TaskCard 
+                    task={task} 
+                    index={index} 
+                    onToggle={toggleTask} 
+                    onDelete={handleDeleteTask}
+                    onTogglePin={togglePin}
+                    onEdit={handleEditTask}
+                  />
+                </Reorder.Item>
+              ))}
             </AnimatePresence>
           </Reorder.Group>
           {filteredTasks.length === 0 && (
@@ -707,10 +757,10 @@ export default function App() {
         <Plus size={32} />
       </button>
 
-      {/* Add Task Dialog */}
+      {/* Add/Edit Task Dialog */}
       <AnimatePresence>
-        {isAdding && (
-          <div className="add-dialog-overlay" onClick={() => setIsAdding(false)}>
+        {(isAdding || isEditing) && (
+          <div className="add-dialog-overlay" onClick={() => { setIsAdding(false); setIsEditing(false); setEditingTask(null); setNewTaskContent(''); setNewTaskTime(''); }}>
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -719,10 +769,12 @@ export default function App() {
               onClick={(e) => e.stopPropagation()}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--on-primary)' }}>Yeni Görev {activeTab === 'weekly' && `(${SHORT_DAYS[selectedDay - 1]})`}</h2>
-                <button className="toolbar-button" onClick={() => setIsAdding(false)}><X size={20} /></button>
+                <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--on-primary)' }}>
+                  {isEditing ? 'Görevi Düzenle' : `Yeni Görev ${activeTab === 'weekly' ? `(${SHORT_DAYS[selectedDay - 1]})` : ''}`}
+                </h2>
+                <button className="toolbar-button" onClick={() => { setIsAdding(false); setIsEditing(false); setEditingTask(null); setNewTaskContent(''); setNewTaskTime(''); }}><X size={20} /></button>
               </div>
-              <form onSubmit={addTask} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <form onSubmit={isEditing ? updateTask : addTask} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <input
                   autoFocus
                   className="add-input"
@@ -740,7 +792,7 @@ export default function App() {
                   />
                   <div style={{ flex: 1 }} />
                   <button type="submit" className="add-submit">
-                    <Plus size={24} />
+                    {isEditing ? <Check size={24} /> : <Plus size={24} />}
                   </button>
                 </div>
               </form>
@@ -864,7 +916,9 @@ export default function App() {
   );
 }
 
-function TaskCard({ task, index, onToggle, onDelete, onTogglePin }) {
+function TaskCard({ task, index, onToggle, onDelete, onTogglePin, onEdit }) {
+  const dragControls = useDragControls();
+
   return (
     <motion.div
       layout
@@ -877,7 +931,12 @@ function TaskCard({ task, index, onToggle, onDelete, onTogglePin }) {
         className="priority-bar"
         style={{ backgroundColor: task.priority === 2 ? 'var(--priority-high)' : task.priority === 1 ? 'var(--priority-medium)' : 'var(--priority-low)' }}
       />
-      <span className="task-number">{index + 1}</span>
+      <span 
+        className="task-number"
+        onPointerDown={(e) => dragControls.start(e)}
+      >
+        {index + 1}
+      </span>
 
       <div className="checkbox-container" onClick={() => onToggle(task)}>
         {task.isChecked ? (
@@ -894,6 +953,14 @@ function TaskCard({ task, index, onToggle, onDelete, onTogglePin }) {
       </div>
 
       {task.time && <span className="task-time">{task.time}</span>}
+
+      <button 
+        className="edit-btn" 
+        onClick={() => onEdit(task)}
+        style={{ background: 'none', border: 'none', color: 'var(--primary-variant)', cursor: 'pointer', padding: 4, opacity: 0.3, transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <PlusCircle size={18} style={{ transform: 'rotate(45deg)' }} />
+      </button>
 
       <button 
         className={`pin-btn ${task.isPinned ? 'active' : ''}`} 
