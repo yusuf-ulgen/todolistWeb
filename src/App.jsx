@@ -869,10 +869,10 @@ export default function App() {
                 <button className="toolbar-button" onClick={() => setIsStatsOpen(false)}><X size={20} /></button>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <StatCard label="Toplam Görev" value={tasks.length} icon={<ListTodo size={24} />} color="#E6D5C3" />
+                <StatCard label="Toplam Görev" value={filteredTasks.length} icon={<ListTodo size={24} />} color="#E6D5C3" />
                 <StatCard label="Tamamlanan" value={completedCount} icon={<CheckCircle2 size={24} />} color="#00BFA5" />
-                <StatCard label="Bekleyen" value={tasks.length - completedCount} icon={<Clock size={24} />} color="#FF9800" />
-                <StatCard label="Verimlilik" value={tasks.length > 0 ? `%${Math.round((completedCount / tasks.length) * 100)}` : '%0'} icon={<BarChart2 size={24} />} color="#4CAF50" />
+                <StatCard label="Bekleyen" value={filteredTasks.length - completedCount} icon={<Clock size={24} />} color="#FF9800" />
+                <StatCard label="Verimlilik" value={filteredTasks.length > 0 ? `%${Math.round((completedCount / filteredTasks.length) * 100)}` : '%0'} icon={<BarChart2 size={24} />} color="#4CAF50" />
               </div>
             </motion.div>
           </div>
