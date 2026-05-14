@@ -239,6 +239,11 @@ body {
   gap: 12px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   transition: transform 0.1s;
+  cursor: grab;
+}
+
+.task-card:active {
+  cursor: grabbing;
 }
 
 .priority-bar {
@@ -281,6 +286,35 @@ body {
   font-size: 12px;
   font-weight: 700;
   color: rgba(62, 39, 35, 0.5);
+  margin-right: 8px;
+}
+
+.pin-btn {
+  background: none;
+  border: none;
+  color: var(--primary-variant);
+  cursor: pointer;
+  padding: 4px;
+  opacity: 0.3;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pin-btn:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.pin-btn.active {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.task-card.pinned {
+  background-color: #FFF9C4;
+  border: 1px solid #FFF176;
 }
 
 .delete-btn {
@@ -400,6 +434,14 @@ body {
 
 .list-item-container.active .list-item-btn {
   font-weight: 700;
+}
+
+.list-item-container[data-reorder-item] {
+  cursor: grab;
+}
+
+.list-item-container:active {
+  cursor: grabbing;
 }
 
 .list-delete-btn {

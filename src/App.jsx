@@ -18,7 +18,7 @@ import {
   collection, query, where, onSnapshot, addDoc,
   updateDoc, deleteDoc, doc, setDoc, orderBy
 } from 'firebase/firestore';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
 
 const DAYS = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
 const SHORT_DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
@@ -40,6 +40,9 @@ export default function App() {
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [listToDelete, setListToDelete] = useState(null);
+  const [taskToDelete, setTaskToDelete] = useState(null);
+  const [newTaskTime, setNewTaskTime] = useState('');
+  const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
   
   // Auth Screen States
   const [authScreen, setAuthScreen] = useState('landing'); // 'landing', 'login', 'signup'
@@ -95,11 +98,37 @@ export default function App() {
       const t = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       const sorted = t.sort((a, b) => {
         if (a.isPinned !== b.isPinned) return b.isPinned ? -1 : 1;
-        return a.sortOrder - b.sortOrder;
+        return (a.sortOrder || 0) - (b.sortOrder || 0);
       });
       setTasks(sorted);
     });
   }, [user, currentListId]);
+
+  // Notification Scheduler
+  useEffect(() => {
+    if (!user || notificationPermission !== 'granted') return;
+
+    const interval = setInterval(() => {
+      const now = new Date();
+      const currentTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      
+      tasks.forEach(task => {
+        if (!task.isChecked && task.time === currentTime && !task.notified) {
+          new Notification("Görev Hatırlatıcı", {
+            body: task.content,
+            icon: '/favicon.ico' // Or any icon
+          });
+          
+          // Mark as notified so we don't spam
+          updateDoc(doc(db, 'users', user.uid, 'tasks', task.id), {
+            notified: true
+          });
+        }
+      });
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [user, tasks, notificationPermission]);
 
   const loginWithGoogle = async () => {
     try {
@@ -172,11 +201,13 @@ export default function App() {
       const tasksRef = collection(db, 'users', user.uid, 'tasks');
       const newTaskRef = doc(tasksRef);
 
+      const timeToSave = newTaskTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
       const newTask = {
         id: newTaskRef.id,
         userId: user.uid,
         content: newTaskContent,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: timeToSave,
         isChecked: false,
         isPinned: false,
         sortOrder: tasks.length,
@@ -187,8 +218,15 @@ export default function App() {
 
       await setDoc(newTaskRef, newTask);
       setNewTaskContent('');
+      setNewTaskTime('');
       setIsAdding(false);
       showToast("Görev eklendi", "success");
+
+      // Request notification permission if time is set
+      if (newTaskTime && notificationPermission === 'default') {
+        const permission = await Notification.requestPermission();
+        setNotificationPermission(permission);
+      }
     } catch (err) {
       console.error(err);
       showToast(`Hata: ${err.code || err.message}`, "error");
@@ -202,14 +240,17 @@ export default function App() {
     try {
       await setDoc(doc(db, 'users', user.uid), { lastActive: new Date() }, { merge: true });
 
-      await addDoc(collection(db, 'users', user.uid, 'lists'), {
+      const docRef = await addDoc(collection(db, 'users', user.uid, 'lists'), {
         userId: user.uid,
         name: newListName,
         sortOrder: lists.length
       });
+      
+      setCurrentListId(docRef.id);
       setNewListName('');
       setIsAddingList(false);
-      showToast("Liste oluşturuldu", "success");
+      setSidebarOpen(false);
+      showToast("Liste oluşturuldu ve geçiş yapıldı", "success");
     } catch (err) {
       console.error(err);
       showToast(`Hata: ${err.code || err.message}`, "error");
@@ -226,10 +267,28 @@ export default function App() {
     }
   };
 
-  const deleteTask = async (taskId) => {
+  const togglePin = async (task) => {
     try {
-      await deleteDoc(doc(db, 'users', user.uid, 'tasks', taskId));
+      await updateDoc(doc(db, 'users', user.uid, 'tasks', task.id), {
+        isPinned: !task.isPinned
+      });
+    } catch (err) {
+      showToast("Pinleme hatası", "error");
+    }
+  };
+
+  const handleDeleteTask = (taskId, e) => {
+    if (e) e.stopPropagation();
+    const task = tasks.find(t => t.id === taskId);
+    setTaskToDelete(task);
+  };
+
+  const confirmDeleteTask = async () => {
+    if (!taskToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'users', user.uid, 'tasks', taskToDelete.id));
       showToast("Görev silindi");
+      setTaskToDelete(null);
     } catch (err) {
       showToast("Silme hatası", "error");
     }
@@ -264,6 +323,43 @@ export default function App() {
     } catch (err) {
       showToast("Liste silme hatası", "error");
       setListToDelete(null);
+    }
+  };
+
+  const handleReorderLists = async (newOrder) => {
+    const defaultList = lists.find(l => l.id === 'default');
+    const others = newOrder.filter(l => l.id !== 'default');
+    const final = [defaultList, ...others];
+    
+    setLists(final);
+    
+    try {
+      for (let i = 0; i < final.length; i++) {
+        if (final[i].id === 'default') continue;
+        await updateDoc(doc(db, 'users', user.uid, 'lists', final[i].id), {
+          sortOrder: i
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleReorderTasks = async (newOrder) => {
+    const pinned = newOrder.filter(t => t.isPinned);
+    const unpinned = newOrder.filter(t => !t.isPinned);
+    const final = [...pinned, ...unpinned];
+    
+    setTasks(final);
+    
+    try {
+      for (let i = 0; i < final.length; i++) {
+        await updateDoc(doc(db, 'users', user.uid, 'tasks', final[i].id), {
+          sortOrder: i
+        });
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -436,26 +532,31 @@ export default function App() {
                 </button>
               </div>
               <div style={{ padding: '8px', flex: 1, overflowY: 'auto' }}>
-                {[...lists].sort((a, b) => {
-                  if (a.id === 'default') return -1;
-                  if (b.id === 'default') return 1;
-                  return (a.sortOrder || 0) - (b.sortOrder || 0);
-                }).map(list => (
-                  <div key={list.id} className={`list-item-container ${currentListId === list.id ? 'active' : ''}`}>
-                    <button
-                      className="list-item-btn"
-                      onClick={() => { setCurrentListId(list.id); setSidebarOpen(false); }}
+                <Reorder.Group axis="y" values={lists} onReorder={handleReorderLists}>
+                  {lists.map(list => (
+                    <Reorder.Item 
+                      key={list.id} 
+                      value={list}
+                      dragListener={list.id !== 'default'}
+                      style={{ listStyle: 'none' }}
                     >
-                      <ListTodo size={18} />
-                      <span style={{ flex: 1 }}>{list.name}</span>
-                    </button>
-                    {list.id !== 'default' && (
-                      <button className="list-delete-btn" onClick={(e) => handleDeleteList(list.id, e)}>
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                      <div className={`list-item-container ${currentListId === list.id ? 'active' : ''}`}>
+                        <button
+                          className="list-item-btn"
+                          onClick={() => { setCurrentListId(list.id); setSidebarOpen(false); }}
+                        >
+                          <ListTodo size={18} />
+                          <span style={{ flex: 1 }}>{list.name}</span>
+                        </button>
+                        {list.id !== 'default' && (
+                          <button className="list-delete-btn" onClick={(e) => handleDeleteList(list.id, e)}>
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </Reorder.Item>
+                  ))}
+                </Reorder.Group>
 
                 <button className="list-item" onClick={() => setIsAddingList(true)} style={{ color: 'var(--accent)', marginTop: 8 }}>
                   <PlusCircle size={18} />
@@ -549,16 +650,25 @@ export default function App() {
         </div>
 
         <div className="task-list">
-          <AnimatePresence mode="popLayout">
-            {tasks
-              .filter(t => t.content.toLowerCase().includes(searchQuery.toLowerCase()))
-              .filter(t => currentListId !== 'default' || (activeTab === 'daily' ? t.weekday === null : t.weekday === selectedDay))
-              .map((task, index) => (
-                <TaskCard key={task.id} task={task} index={index} onToggle={toggleTask} onDelete={deleteTask} />
-              ))
-            }
-          </AnimatePresence>
-
+          <Reorder.Group axis="y" values={tasks} onReorder={handleReorderTasks} className="task-list-group">
+            <AnimatePresence mode="popLayout">
+              {tasks
+                .filter(t => t.content.toLowerCase().includes(searchQuery.toLowerCase()))
+                .filter(t => currentListId !== 'default' || (activeTab === 'daily' ? t.weekday === null : t.weekday === selectedDay))
+                .map((task, index) => (
+                  <Reorder.Item key={task.id} value={task}>
+                    <TaskCard 
+                      task={task} 
+                      index={index} 
+                      onToggle={toggleTask} 
+                      onDelete={handleDeleteTask}
+                      onTogglePin={togglePin}
+                    />
+                  </Reorder.Item>
+                ))
+              }
+            </AnimatePresence>
+          </Reorder.Group>
           {filteredTasks.length === 0 && (
             <div style={{ textAlign: 'center', marginTop: 80, color: 'var(--on-primary)', opacity: 0.3 }}>
               <ListTodo size={80} style={{ marginBottom: 16 }} />
@@ -588,7 +698,7 @@ export default function App() {
                 <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--on-primary)' }}>Yeni Görev {activeTab === 'weekly' && `(${SHORT_DAYS[selectedDay - 1]})`}</h2>
                 <button className="toolbar-button" onClick={() => setIsAdding(false)}><X size={20} /></button>
               </div>
-              <form onSubmit={addTask} style={{ display: 'flex', gap: 12 }}>
+              <form onSubmit={addTask} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <input
                   autoFocus
                   className="add-input"
@@ -596,9 +706,19 @@ export default function App() {
                   value={newTaskContent}
                   onChange={(e) => setNewTaskContent(e.target.value)}
                 />
-                <button type="submit" className="add-submit">
-                  <Plus size={24} />
-                </button>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <input
+                    type="time"
+                    className="add-input"
+                    style={{ flex: 'none', width: '130px' }}
+                    value={newTaskTime}
+                    onChange={(e) => setNewTaskTime(e.target.value)}
+                  />
+                  <div style={{ flex: 1 }} />
+                  <button type="submit" className="add-submit">
+                    <Plus size={24} />
+                  </button>
+                </div>
               </form>
             </motion.div>
           </div>
@@ -688,20 +808,44 @@ export default function App() {
             </motion.div>
           </div>
         )}
+      {/* Task Delete Confirm Modal */}
+      <AnimatePresence>
+        {taskToDelete && (
+          <div className="confirm-modal-overlay" onClick={() => setTaskToDelete(null)}>
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="confirm-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="confirm-icon-container">
+                <Trash2 size={32} />
+              </div>
+              <h2 className="confirm-title">Görevi Sil?</h2>
+              <p className="confirm-message">
+                Bu görevi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+              </p>
+              <div className="confirm-actions">
+                <button className="confirm-btn-cancel" onClick={() => setTaskToDelete(null)}>Vazgeç</button>
+                <button className="confirm-btn-delete" onClick={confirmDeleteTask}>Evet, Sil</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
-
     </div>
   );
 }
 
-function TaskCard({ task, index, onToggle, onDelete }) {
+function TaskCard({ task, index, onToggle, onDelete, onTogglePin }) {
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="task-card"
+      className={`task-card ${task.isPinned ? 'pinned' : ''}`}
     >
       <div
         className="priority-bar"
@@ -725,7 +869,15 @@ function TaskCard({ task, index, onToggle, onDelete }) {
 
       <span className="task-time">{task.time}</span>
 
-      <button className="delete-btn" onClick={() => onDelete(task.id)}>
+      <button 
+        className={`pin-btn ${task.isPinned ? 'active' : ''}`} 
+        onClick={() => onTogglePin(task)}
+        title={task.isPinned ? "Pini Kaldır" : "Pinle"}
+      >
+        <Pin size={18} fill={task.isPinned ? "currentColor" : "none"} />
+      </button>
+
+      <button className="delete-btn" onClick={(e) => onDelete(task.id, e)}>
         <Trash2 size={18} />
       </button>
     </motion.div>
