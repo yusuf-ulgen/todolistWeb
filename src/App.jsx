@@ -111,25 +111,44 @@ export default function App() {
 
     const interval = setInterval(() => {
       const now = new Date();
-      const currentTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      const HH = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const currentTime = `${HH}:${mm}`;
       
       tasks.forEach(task => {
         if (!task.isChecked && task.time === currentTime && !task.notified) {
-          new Notification("Görev Hatırlatıcı", {
-            body: task.content,
-            icon: '/favicon.ico' // Or any icon
-          });
-          
-          // Mark as notified so we don't spam
-          updateDoc(doc(db, 'users', user.uid, 'tasks', task.id), {
-            notified: true
-          });
+          try {
+            new Notification("Görev Hatırlatıcı", {
+              body: task.content,
+              icon: '/favicon.ico'
+            });
+            
+            updateDoc(doc(db, 'users', user.uid, 'tasks', task.id), {
+              notified: true
+            });
+          } catch (e) {
+            console.error("Bildirim gönderilemedi", e);
+          }
         }
       });
-    }, 30000); // Check every 30 seconds
+    }, 10000); // Her 10 saniyede bir kontrol et
 
     return () => clearInterval(interval);
   }, [user, tasks, notificationPermission]);
+
+  const requestNotificationPermission = async () => {
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+      if (permission === 'granted') {
+        showToast("Bildirimlere izin verildi", "success");
+      } else {
+        showToast("Bildirim izni reddedildi", "error");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const loginWithGoogle = async () => {
     try {
@@ -636,11 +655,22 @@ export default function App() {
 
       {/* Main Content */}
       <main className="main-content">
-        <div className="stat-text">
-          {currentListId === 'default'
-            ? (activeTab === 'daily' ? `Bugünün görevleri ${completedCount}/${tasks.filter(t => t.weekday === null).length}` : `${DAYS[selectedDay - 1]} - Görevler`)
-            : `${currentListName} - Toplam ${tasks.length} Görev`
-          }
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 16 }}>
+          <div className="stat-text" style={{ margin: 0 }}>
+            {currentListId === 'default'
+              ? (activeTab === 'daily' ? `Bugünün görevleri ${completedCount}/${tasks.filter(t => t.weekday === null).length}` : `${DAYS[selectedDay - 1]} - Görevler`)
+              : `${currentListName} - Toplam ${tasks.length} Görev`
+            }
+          </div>
+          {notificationPermission === 'default' && (
+            <button 
+              onClick={requestNotificationPermission}
+              className="notification-badge"
+              title="Bildirimleri Aç"
+            >
+              <AlertCircle size={14} /> Bildirimleri Aç
+            </button>
+          )}
         </div>
 
         <div className="task-list">

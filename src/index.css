@@ -223,6 +223,27 @@ body {
   margin-bottom: 16px;
 }
 
+.notification-badge {
+  background-color: var(--primary);
+  color: var(--on-primary);
+  border: 1px solid var(--primary-variant);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.notification-badge:hover {
+  background-color: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
 .task-list {
   max-width: 600px;
   margin: 0 auto;
