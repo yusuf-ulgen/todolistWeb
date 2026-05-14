@@ -808,6 +808,8 @@ export default function App() {
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
+
       {/* Task Delete Confirm Modal */}
       <AnimatePresence>
         {taskToDelete && (
