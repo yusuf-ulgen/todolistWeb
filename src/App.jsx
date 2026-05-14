@@ -7,7 +7,8 @@ import {
   Plus, LogOut, Search, Menu, X, ListTodo, 
   Clock, BarChart2, ChevronRight, User as UserIcon,
   Calendar, Info, PlusCircle, AlertCircle, Check,
-  LogIn, UserPlus, ChevronLeft, Mail, Lock
+  LogIn, UserPlus, ChevronLeft, Mail, Lock,
+  GripVertical
 } from 'lucide-react';
 import { 
   signInWithPopup, onAuthStateChanged, signOut,
@@ -18,7 +19,7 @@ import {
   collection, query, where, onSnapshot, addDoc,
   updateDoc, deleteDoc, doc, setDoc, orderBy
 } from 'firebase/firestore';
-import { motion, AnimatePresence, Reorder } from 'framer-motion';
+import { motion, AnimatePresence, Reorder, useDragControls } from 'framer-motion';
 
 const DAYS = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
 const SHORT_DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
@@ -201,7 +202,7 @@ export default function App() {
       const tasksRef = collection(db, 'users', user.uid, 'tasks');
       const newTaskRef = doc(tasksRef);
 
-      const timeToSave = newTaskTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const timeToSave = newTaskTime || '';
 
       const newTask = {
         id: newTaskRef.id,
@@ -269,9 +270,16 @@ export default function App() {
 
   const togglePin = async (task) => {
     try {
-      await updateDoc(doc(db, 'users', user.uid, 'tasks', task.id), {
-        isPinned: !task.isPinned
-      });
+      const newIsPinned = !task.isPinned;
+      const updates = { isPinned: newIsPinned };
+      
+      if (newIsPinned) {
+        // Find the lowest sortOrder to put it at the very top
+        const minSortOrder = tasks.length > 0 ? Math.min(...tasks.map(t => t.sortOrder || 0)) : 0;
+        updates.sortOrder = minSortOrder - 1;
+      }
+
+      await updateDoc(doc(db, 'users', user.uid, 'tasks', task.id), updates);
     } catch (err) {
       showToast("Pinleme hatası", "error");
     }
@@ -534,30 +542,16 @@ export default function App() {
               <div style={{ padding: '8px', flex: 1, overflowY: 'auto' }}>
                 <Reorder.Group axis="y" values={lists} onReorder={handleReorderLists}>
                   {lists.map(list => (
-                    <Reorder.Item 
+                    <ListItem 
                       key={list.id} 
-                      value={list}
-                      dragListener={list.id !== 'default'}
-                      style={{ listStyle: 'none' }}
-                    >
-                      <div className={`list-item-container ${currentListId === list.id ? 'active' : ''}`}>
-                        <button
-                          className="list-item-btn"
-                          onClick={() => { setCurrentListId(list.id); setSidebarOpen(false); }}
-                        >
-                          <ListTodo size={18} />
-                          <span style={{ flex: 1 }}>{list.name}</span>
-                        </button>
-                        {list.id !== 'default' && (
-                          <button className="list-delete-btn" onClick={(e) => handleDeleteList(list.id, e)}>
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </div>
-                    </Reorder.Item>
+                      list={list} 
+                      currentListId={currentListId}
+                      setCurrentListId={setCurrentListId}
+                      setSidebarOpen={setSidebarOpen}
+                      handleDeleteList={handleDeleteList}
+                    />
                   ))}
                 </Reorder.Group>
-
                 <button className="list-item" onClick={() => setIsAddingList(true)} style={{ color: 'var(--accent)', marginTop: 8 }}>
                   <PlusCircle size={18} />
                   Yeni Liste Ekle
@@ -869,7 +863,7 @@ function TaskCard({ task, index, onToggle, onDelete, onTogglePin }) {
         </p>
       </div>
 
-      <span className="task-time">{task.time}</span>
+      {task.time && <span className="task-time">{task.time}</span>}
 
       <button 
         className={`pin-btn ${task.isPinned ? 'active' : ''}`} 
@@ -893,5 +887,43 @@ function StatCard({ label, value, icon, color }) {
       <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--on-primary)' }}>{value}</div>
       <div style={{ fontSize: 12, color: 'var(--gray)', fontWeight: 600 }}>{label}</div>
     </div>
+  );
+}
+
+function ListItem({ list, currentListId, setCurrentListId, setSidebarOpen, handleDeleteList }) {
+  const dragControls = useDragControls();
+
+  return (
+    <Reorder.Item 
+      value={list}
+      dragListener={false}
+      dragControls={dragControls}
+      style={{ listStyle: 'none' }}
+    >
+      <div className={`list-item-container ${currentListId === list.id ? 'active' : ''}`}>
+        {list.id !== 'default' && (
+          <div 
+            className="drag-handle" 
+            onPointerDown={(e) => dragControls.start(e)}
+            style={{ paddingLeft: 8, cursor: 'grab', color: 'var(--primary-variant)', display: 'flex', alignItems: 'center' }}
+          >
+            <GripVertical size={18} />
+          </div>
+        )}
+        <button
+          className="list-item-btn"
+          onClick={() => { setCurrentListId(list.id); setSidebarOpen(false); }}
+          style={{ paddingLeft: list.id === 'default' ? 16 : 8 }}
+        >
+          <ListTodo size={18} />
+          <span style={{ flex: 1 }}>{list.name}</span>
+        </button>
+        {list.id !== 'default' && (
+          <button className="list-delete-btn" onClick={(e) => handleDeleteList(list.id, e)}>
+            <Trash2 size={16} />
+          </button>
+        )}
+      </div>
+    </Reorder.Item>
   );
 }
