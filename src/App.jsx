@@ -114,7 +114,7 @@ export default function App() {
     return onSnapshot(q, (snapshot) => {
       const t = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       const sorted = t.sort((a, b) => {
-        if (a.isPinned !== b.isPinned) return b.isPinned ? -1 : 1;
+        if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
         return (a.sortOrder || 0) - (b.sortOrder || 0);
       });
       setTasks(sorted);
