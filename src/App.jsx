@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   auth, db, googleProvider
 } from './firebase';
@@ -56,6 +56,17 @@ export default function App() {
   const [rememberMe, setRememberMe] = useState(true);
   const [authLoading, setAuthLoading] = useState(false);
   const [isAuthAction, setIsAuthAction] = useState(false);
+
+  // Refs to avoid stale closures in event handlers
+  const tasksRef = useRef(tasks);
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
+
+  const listsRef = useRef(lists);
+  useEffect(() => {
+    listsRef.current = lists;
+  }, [lists]);
 
   const showToast = (message, type = 'info') => {
     const id = Date.now();
@@ -420,40 +431,48 @@ export default function App() {
     }
   };
 
-  const handleReorderLists = async (newOrder) => {
+  const handleReorderLists = (newOrder) => {
     const defaultList = lists.find(l => l.id === 'default');
     const others = newOrder.filter(l => l.id !== 'default');
     const final = [defaultList, ...others];
-    
     setLists(final);
-    
+  };
+
+  const saveListsOrderToFirestore = async () => {
+    if (!user) return;
+    const currentLists = listsRef.current;
     try {
-      for (let i = 0; i < final.length; i++) {
-        if (final[i].id === 'default') continue;
-        await updateDoc(doc(db, 'users', user.uid, 'lists', final[i].id), {
-          sortOrder: i
+      const promises = currentLists.map((list, idx) => {
+        if (list.id === 'default') return Promise.resolve();
+        return updateDoc(doc(db, 'users', user.uid, 'lists', list.id), {
+          sortOrder: idx
         });
-      }
+      });
+      await Promise.all(promises);
     } catch (err) {
-      console.error(err);
+      console.error("Error saving lists order: ", err);
     }
   };
 
-  const handleReorderTasks = async (newOrder) => {
+  const handleReorderTasks = (newOrder) => {
     const pinned = newOrder.filter(t => t.isPinned);
     const unpinned = newOrder.filter(t => !t.isPinned);
     const final = [...pinned, ...unpinned];
-    
     setTasks(final);
-    
+  };
+
+  const saveTasksOrderToFirestore = async () => {
+    if (!user) return;
+    const currentTasks = tasksRef.current;
     try {
-      for (let i = 0; i < final.length; i++) {
-        await updateDoc(doc(db, 'users', user.uid, 'tasks', final[i].id), {
-          sortOrder: i
-        });
-      }
+      const promises = currentTasks.map((task, idx) => 
+        updateDoc(doc(db, 'users', user.uid, 'tasks', task.id), {
+          sortOrder: idx
+        })
+      );
+      await Promise.all(promises);
     } catch (err) {
-      console.error(err);
+      console.error("Error saving tasks order: ", err);
     }
   };
 
@@ -636,6 +655,7 @@ export default function App() {
                       setCurrentListId={setCurrentListId}
                       setSidebarOpen={setSidebarOpen}
                       handleDeleteList={handleDeleteList}
+                      onDragEnd={saveListsOrderToFirestore}
                     />
                   ))}
                 </Reorder.Group>
@@ -762,6 +782,7 @@ export default function App() {
                   onDelete={handleDeleteTask}
                   onTogglePin={togglePin}
                   onEdit={handleEditTask}
+                  onDragEnd={saveTasksOrderToFirestore}
                 />
               ))}
             </AnimatePresence>
@@ -954,7 +975,7 @@ export default function App() {
   );
 }
 
-function ReorderItemWrapper({ task, index, onToggle, onDelete, onTogglePin, onEdit }) {
+function ReorderItemWrapper({ task, index, onToggle, onDelete, onTogglePin, onEdit, onDragEnd }) {
   const dragControls = useDragControls();
 
   return (
@@ -962,6 +983,7 @@ function ReorderItemWrapper({ task, index, onToggle, onDelete, onTogglePin, onEd
       value={task}
       dragListener={false}
       dragControls={dragControls}
+      onDragEnd={onDragEnd}
     >
       <TaskCard 
         task={task} 
@@ -1047,7 +1069,7 @@ function StatCard({ label, value, icon, color }) {
   );
 }
 
-function ListItem({ list, currentListId, setCurrentListId, setSidebarOpen, handleDeleteList }) {
+function ListItem({ list, currentListId, setCurrentListId, setSidebarOpen, handleDeleteList, onDragEnd }) {
   const dragControls = useDragControls();
 
   return (
@@ -1056,6 +1078,7 @@ function ListItem({ list, currentListId, setCurrentListId, setSidebarOpen, handl
       dragListener={false}
       dragControls={dragControls}
       style={{ listStyle: 'none' }}
+      onDragEnd={onDragEnd}
     >
       <div className={`list-item-container ${currentListId === list.id ? 'active' : ''}`}>
         {list.id !== 'default' && (
