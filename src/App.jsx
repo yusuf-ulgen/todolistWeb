@@ -2,15 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   auth, db, googleProvider
 } from './firebase';
-import { 
-  CheckCircle2, Circle, Pin, Trash2, 
-  Plus, LogOut, Search, Menu, X, ListTodo, 
+import {
+  CheckCircle2, Circle, Pin, Trash2,
+  Plus, LogOut, Search, Menu, X, ListTodo,
   Clock, BarChart2, ChevronRight, User as UserIcon,
   Calendar, Info, PlusCircle, AlertCircle, Check,
   LogIn, UserPlus, ChevronLeft, Mail, Lock,
   GripVertical
 } from 'lucide-react';
-import { 
+import {
   signInWithPopup, onAuthStateChanged, signOut,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   setPersistence, browserSessionPersistence, browserLocalPersistence
@@ -44,11 +44,11 @@ export default function App() {
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [newTaskTime, setNewTaskTime] = useState('');
   const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
-  
+
   // Edit Task States
   const [isEditing, setIsEditing] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  
+
   // Auth Screen States
   const [authScreen, setAuthScreen] = useState('landing'); // 'landing', 'login', 'signup'
   const [email, setEmail] = useState('');
@@ -142,18 +142,18 @@ export default function App() {
       const HH = String(now.getHours()).padStart(2, '0');
       const mm = String(now.getMinutes()).padStart(2, '0');
       const currentTime = `${HH}:${mm}`;
-      
+
       tasks.forEach(task => {
         // Check if day matches for weekly tasks
         const isCorrectDay = task.weekday === null || task.weekday === (now.getDay() === 0 ? 7 : now.getDay());
-        
+
         if (!task.isChecked && task.time === currentTime && !task.notified && isCorrectDay) {
           try {
             new Notification("Görev Hatırlatıcı", {
               body: task.content,
               icon: '/favicon.ico'
             });
-            
+
             updateDoc(doc(db, 'users', user.uid, 'tasks', task.id), {
               notified: true
             });
@@ -201,7 +201,7 @@ export default function App() {
     if (e) e.preventDefault();
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) return showToast("Lütfen tüm alanları doldurun", "error");
-    
+
     setAuthLoading(true);
     setIsAuthAction(true);
     try {
@@ -310,7 +310,7 @@ export default function App() {
 
     try {
       const taskRef = doc(db, 'users', user.uid, 'tasks', editingTask.id);
-      
+
       // If time changed, reset notified status
       const timeChanged = newTaskTime !== editingTask.time;
 
@@ -343,7 +343,7 @@ export default function App() {
         name: newListName,
         sortOrder: lists.length
       });
-      
+
       setCurrentListId(docRef.id);
       setNewListName('');
       setIsAddingList(false);
@@ -369,7 +369,7 @@ export default function App() {
     try {
       const newIsPinned = !task.isPinned;
       const updates = { isPinned: newIsPinned };
-      
+
       if (newIsPinned) {
         // Find the lowest sortOrder to put it at the very top
         const minSortOrder = tasks.length > 0 ? Math.min(...tasks.map(t => t.sortOrder || 0)) : 0;
@@ -465,7 +465,7 @@ export default function App() {
     if (!user) return;
     const currentTasks = tasksRef.current;
     try {
-      const promises = currentTasks.map((task, idx) => 
+      const promises = currentTasks.map((task, idx) =>
         updateDoc(doc(db, 'users', user.uid, 'tasks', task.id), {
           sortOrder: idx
         })
@@ -510,7 +510,7 @@ export default function App() {
 
       {!user || isAuthAction ? (
         <div className="login-container">
-          <motion.div 
+          <motion.div
             key={authScreen}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -525,7 +525,7 @@ export default function App() {
             <div style={{ backgroundColor: 'var(--primary)', width: 80, height: 80, borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
               <ListTodo size={40} color="var(--on-primary)" />
             </div>
-            
+
             <h1 style={{ fontSize: 32, marginBottom: 8 }}>Todolist</h1>
             <p style={{ color: 'var(--gray)' }}>Görevlerini tüm cihazlarında eşitle.</p>
 
@@ -546,10 +546,10 @@ export default function App() {
             {authScreen === 'login' && (
               <form className="auth-form" onSubmit={handleEmailLogin} autoComplete="off">
                 <div className="auth-input-group">
-                  <input 
-                    type="email" 
-                    className="auth-input" 
-                    placeholder="E-posta" 
+                  <input
+                    type="email"
+                    className="auth-input"
+                    placeholder="E-posta"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -557,10 +557,10 @@ export default function App() {
                   />
                 </div>
                 <div className="auth-input-group">
-                  <input 
-                    type="password" 
-                    className="auth-input" 
-                    placeholder="Şifre" 
+                  <input
+                    type="password"
+                    className="auth-input"
+                    placeholder="Şifre"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -568,10 +568,10 @@ export default function App() {
                   />
                 </div>
                 <label className="remember-me">
-                  <input 
-                    type="checkbox" 
-                    checked={rememberMe} 
-                    onChange={(e) => setRememberMe(e.target.checked)} 
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
                   />
                   Beni Hatırla
                 </label>
@@ -587,10 +587,10 @@ export default function App() {
             {authScreen === 'signup' && (
               <form className="auth-form" onSubmit={handleEmailSignUp} autoComplete="off">
                 <div className="auth-input-group">
-                  <input 
-                    type="email" 
-                    className="auth-input" 
-                    placeholder="E-posta" 
+                  <input
+                    type="email"
+                    className="auth-input"
+                    placeholder="E-posta"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -598,10 +598,10 @@ export default function App() {
                   />
                 </div>
                 <div className="auth-input-group">
-                  <input 
-                    type="password" 
-                    className="auth-input" 
-                    placeholder="Şifre (En az 6 karakter)" 
+                  <input
+                    type="password"
+                    className="auth-input"
+                    placeholder="Şifre (En az 6 karakter)"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -622,353 +622,353 @@ export default function App() {
       ) : (
         <>
 
-      {/* Sidebar / Drawer */}
-      <AnimatePresence>
-        {isSidebarOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="drawer-overlay"
-              onClick={() => setSidebarOpen(false)}
-            />
-            <motion.aside
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              className={`drawer open`}
-            >
-              <div className="drawer-header">
-                <span className="drawer-title">Listelerim</span>
-                <button className="toolbar-button" onClick={() => setSidebarOpen(false)}>
-                  <X size={24} />
-                </button>
+          {/* Sidebar / Drawer */}
+          <AnimatePresence>
+            {isSidebarOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="drawer-overlay"
+                  onClick={() => setSidebarOpen(false)}
+                />
+                <motion.aside
+                  initial={{ x: '-100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '-100%' }}
+                  className={`drawer open`}
+                >
+                  <div className="drawer-header">
+                    <span className="drawer-title">Listelerim</span>
+                    <button className="toolbar-button" onClick={() => setSidebarOpen(false)}>
+                      <X size={24} />
+                    </button>
+                  </div>
+                  <div style={{ padding: '8px', flex: 1, overflowY: 'auto' }}>
+                    <Reorder.Group axis="y" values={lists} onReorder={handleReorderLists}>
+                      {lists.map(list => (
+                        <ListItem
+                          key={list.id}
+                          list={list}
+                          currentListId={currentListId}
+                          setCurrentListId={setCurrentListId}
+                          setSidebarOpen={setSidebarOpen}
+                          handleDeleteList={handleDeleteList}
+                          onDragEnd={saveListsOrderToFirestore}
+                        />
+                      ))}
+                    </Reorder.Group>
+                    <button className="list-item" onClick={() => setIsAddingList(true)} style={{ color: 'var(--accent)', marginTop: 8 }}>
+                      <PlusCircle size={18} />
+                      Yeni Liste Ekle
+                    </button>
+                  </div>
+                  <div style={{ padding: 16, borderTop: '1px solid var(--primary)', backgroundColor: 'rgba(230, 213, 195, 0.2)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                      <img src={user.photoURL} alt="" style={{ width: 40, height: 40, borderRadius: 12 }} />
+                      <div style={{ overflow: 'hidden' }}>
+                        <p style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>{user.displayName}</p>
+                        <p style={{ fontSize: 10, color: 'var(--gray)', margin: 0 }}>{user.email}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={logout}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#F44336', border: 'none', background: 'none', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      <LogOut size={16} /> Çıkış Yap
+                    </button>
+                  </div>
+                </motion.aside>
+              </>
+            )}
+          </AnimatePresence>
+
+          {/* App Bar */}
+          <header className="app-bar">
+            <div className="toolbar">
+              <button className="toolbar-button" onClick={() => setSidebarOpen(true)}>
+                <Menu size={24} />
+              </button>
+              <h1 className="toolbar-title">{currentListName}</h1>
+              <button className="toolbar-button" onClick={() => setIsStatsOpen(true)}>
+                <BarChart2 size={24} />
+              </button>
+            </div>
+
+            {/* Tabs - Only show for Default List */}
+            {currentListId === 'default' && (
+              <>
+                <div className="tab-layout">
+                  <button className={`tab-item ${activeTab === 'daily' ? 'active' : ''}`} onClick={() => setActiveTab('daily')}>
+                    GÜNLÜK
+                    {activeTab === 'daily' && <div className="tab-indicator" />}
+                  </button>
+                  <button className={`tab-item ${activeTab === 'weekly' ? 'active' : ''}`} onClick={() => setActiveTab('weekly')}>
+                    HAFTALIK
+                    {activeTab === 'weekly' && <div className="tab-indicator" />}
+                  </button>
+                </div>
+
+                {/* Day Selector (Only for Weekly in Default List) */}
+                {activeTab === 'weekly' && (
+                  <div className="days-selector">
+                    {SHORT_DAYS.map((day, idx) => (
+                      <button
+                        key={day}
+                        className={`day-btn ${selectedDay === idx + 1 ? 'active' : ''}`}
+                        onClick={() => setSelectedDay(idx + 1)}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Search */}
+            <div className="search-container">
+              <div className="search-box">
+                <Search size={18} color="rgba(62, 39, 35, 0.5)" />
+                <input
+                  className="search-input"
+                  placeholder="Görevlerde ara..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
-              <div style={{ padding: '8px', flex: 1, overflowY: 'auto' }}>
-                <Reorder.Group axis="y" values={lists} onReorder={handleReorderLists}>
-                  {lists.map(list => (
-                    <ListItem 
-                      key={list.id} 
-                      list={list} 
-                      currentListId={currentListId}
-                      setCurrentListId={setCurrentListId}
-                      setSidebarOpen={setSidebarOpen}
-                      handleDeleteList={handleDeleteList}
-                      onDragEnd={saveListsOrderToFirestore}
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <main className="main-content">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 16 }}>
+              <div className="stat-text" style={{ margin: 0 }}>
+                {currentListId === 'default'
+                  ? (activeTab === 'daily' ? `Bugünün görevleri ${completedCount}/${tasks.filter(t => t.weekday === null).length}` : `${DAYS[selectedDay - 1]} - Görevler`)
+                  : `${currentListName} - Toplam ${tasks.length} Görev`
+                }
+              </div>
+              {notificationPermission === 'default' && (
+                <button
+                  onClick={requestNotificationPermission}
+                  className="notification-badge"
+                  title="Bildirimleri Aç"
+                >
+                  <AlertCircle size={14} /> Bildirimleri Aç
+                </button>
+              )}
+            </div>
+
+            <div className="task-list">
+              <Reorder.Group
+                axis="y"
+                values={filteredTasks}
+                onReorder={(newOrder) => {
+                  // We need to maintain the original tasks array but update the order for the filtered ones
+                  const otherTasks = tasks.filter(t => !filteredTasks.find(ft => ft.id === t.id));
+                  handleReorderTasks([...newOrder, ...otherTasks]);
+                }}
+                className="task-list-group"
+              >
+                <AnimatePresence mode="popLayout">
+                  {filteredTasks.map((task, index) => (
+                    <ReorderItemWrapper
+                      key={task.id}
+                      task={task}
+                      index={index}
+                      onToggle={toggleTask}
+                      onDelete={handleDeleteTask}
+                      onTogglePin={togglePin}
+                      onEdit={handleEditTask}
+                      onDragEnd={saveTasksOrderToFirestore}
                     />
                   ))}
-                </Reorder.Group>
-                <button className="list-item" onClick={() => setIsAddingList(true)} style={{ color: 'var(--accent)', marginTop: 8 }}>
-                  <PlusCircle size={18} />
-                  Yeni Liste Ekle
-                </button>
-              </div>
-              <div style={{ padding: 16, borderTop: '1px solid var(--primary)', backgroundColor: 'rgba(230, 213, 195, 0.2)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                  <img src={user.photoURL} alt="" style={{ width: 40, height: 40, borderRadius: 12 }} />
-                  <div style={{ overflow: 'hidden' }}>
-                    <p style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>{user.displayName}</p>
-                    <p style={{ fontSize: 10, color: 'var(--gray)', margin: 0 }}>{user.email}</p>
-                  </div>
+                </AnimatePresence>
+              </Reorder.Group>
+              {filteredTasks.length === 0 && (
+                <div style={{ textAlign: 'center', marginTop: 80, color: 'var(--on-primary)', opacity: 0.3 }}>
+                  <ListTodo size={80} style={{ marginBottom: 16 }} />
+                  <p style={{ fontSize: 18, fontWeight: 700 }}>Henüz görev yok</p>
                 </div>
-                <button
-                  onClick={logout}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#F44336', border: 'none', background: 'none', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  <LogOut size={16} /> Çıkış Yap
-                </button>
-              </div>
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* App Bar */}
-      <header className="app-bar">
-        <div className="toolbar">
-          <button className="toolbar-button" onClick={() => setSidebarOpen(true)}>
-            <Menu size={24} />
-          </button>
-          <h1 className="toolbar-title">{currentListName}</h1>
-          <button className="toolbar-button" onClick={() => setIsStatsOpen(true)}>
-            <BarChart2 size={24} />
-          </button>
-        </div>
-
-        {/* Tabs - Only show for Default List */}
-        {currentListId === 'default' && (
-          <>
-            <div className="tab-layout">
-              <button className={`tab-item ${activeTab === 'daily' ? 'active' : ''}`} onClick={() => setActiveTab('daily')}>
-                GÜNLÜK
-                {activeTab === 'daily' && <div className="tab-indicator" />}
-              </button>
-              <button className={`tab-item ${activeTab === 'weekly' ? 'active' : ''}`} onClick={() => setActiveTab('weekly')}>
-                HAFTALIK
-                {activeTab === 'weekly' && <div className="tab-indicator" />}
-              </button>
+              )}
             </div>
+          </main>
 
-            {/* Day Selector (Only for Weekly in Default List) */}
-            {activeTab === 'weekly' && (
-              <div className="days-selector">
-                {SHORT_DAYS.map((day, idx) => (
-                  <button
-                    key={day}
-                    className={`day-btn ${selectedDay === idx + 1 ? 'active' : ''}`}
-                    onClick={() => setSelectedDay(idx + 1)}
-                  >
-                    {day}
-                  </button>
-                ))}
+          {/* FAB */}
+          <button
+            className="fab"
+            onClick={() => setIsAdding(true)}
+            title="Yeni Görev Ekle (Alt + Z)"
+          >
+            <Plus size={32} />
+          </button>
+
+          {/* Add/Edit Task Dialog */}
+          <AnimatePresence>
+            {(isAdding || isEditing) && (
+              <div className="add-dialog-overlay" onClick={() => { setIsAdding(false); setIsEditing(false); setEditingTask(null); setNewTaskContent(''); setNewTaskTime(''); }}>
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="add-dialog"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--on-primary)' }}>
+                      {isEditing ? 'Görevi Düzenle' : `Yeni Görev ${activeTab === 'weekly' ? `(${SHORT_DAYS[selectedDay - 1]})` : ''}`}
+                    </h2>
+                    <button className="toolbar-button" onClick={() => { setIsAdding(false); setIsEditing(false); setEditingTask(null); setNewTaskContent(''); setNewTaskTime(''); }}><X size={20} /></button>
+                  </div>
+                  <form onSubmit={isEditing ? updateTask : addTask} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <textarea
+                      autoFocus
+                      className="add-input"
+                      placeholder="Görev metni..."
+                      value={newTaskContent}
+                      onChange={(e) => setNewTaskContent(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          if (isEditing) updateTask(e);
+                          else addTask(e);
+                        }
+                      }}
+                      style={{ minHeight: '100px', resize: 'vertical', fontFamily: 'inherit' }}
+                    />
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <input
+                        type="time"
+                        className="add-input"
+                        style={{ flex: 'none', width: '130px' }}
+                        value={newTaskTime}
+                        onChange={(e) => setNewTaskTime(e.target.value)}
+                        title="Hatırlatma Saati"
+                      />
+                      <div style={{ flex: 1 }} />
+                      <button type="submit" className="add-submit" title={isEditing ? "Kaydet" : "Ekle"}>
+                        {isEditing ? <Check size={24} /> : <Plus size={24} />}
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
               </div>
             )}
-          </>
-        )}
+          </AnimatePresence>
 
-        {/* Search */}
-        <div className="search-container">
-          <div className="search-box">
-            <Search size={18} color="rgba(62, 39, 35, 0.5)" />
-            <input
-              className="search-input"
-              placeholder="Görevlerde ara..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="main-content">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 16 }}>
-          <div className="stat-text" style={{ margin: 0 }}>
-            {currentListId === 'default'
-              ? (activeTab === 'daily' ? `Bugünün görevleri ${completedCount}/${tasks.filter(t => t.weekday === null).length}` : `${DAYS[selectedDay - 1]} - Görevler`)
-              : `${currentListName} - Toplam ${tasks.length} Görev`
-            }
-          </div>
-          {notificationPermission === 'default' && (
-            <button 
-              onClick={requestNotificationPermission}
-              className="notification-badge"
-              title="Bildirimleri Aç"
-            >
-              <AlertCircle size={14} /> Bildirimleri Aç
-            </button>
-          )}
-        </div>
-
-        <div className="task-list">
-          <Reorder.Group 
-            axis="y" 
-            values={filteredTasks} 
-            onReorder={(newOrder) => {
-              // We need to maintain the original tasks array but update the order for the filtered ones
-              const otherTasks = tasks.filter(t => !filteredTasks.find(ft => ft.id === t.id));
-              handleReorderTasks([...newOrder, ...otherTasks]);
-            }} 
-            className="task-list-group"
-          >
-            <AnimatePresence mode="popLayout">
-              {filteredTasks.map((task, index) => (
-                <ReorderItemWrapper 
-                  key={task.id}
-                  task={task}
-                  index={index}
-                  onToggle={toggleTask}
-                  onDelete={handleDeleteTask}
-                  onTogglePin={togglePin}
-                  onEdit={handleEditTask}
-                  onDragEnd={saveTasksOrderToFirestore}
-                />
-              ))}
-            </AnimatePresence>
-          </Reorder.Group>
-          {filteredTasks.length === 0 && (
-            <div style={{ textAlign: 'center', marginTop: 80, color: 'var(--on-primary)', opacity: 0.3 }}>
-              <ListTodo size={80} style={{ marginBottom: 16 }} />
-              <p style={{ fontSize: 18, fontWeight: 700 }}>Henüz görev yok</p>
-            </div>
-          )}
-        </div>
-      </main>
-
-      {/* FAB */}
-      <button 
-        className="fab" 
-        onClick={() => setIsAdding(true)}
-        title="Yeni Görev Ekle (Alt + Z)"
-      >
-        <Plus size={32} />
-      </button>
-
-      {/* Add/Edit Task Dialog */}
-      <AnimatePresence>
-        {(isAdding || isEditing) && (
-          <div className="add-dialog-overlay" onClick={() => { setIsAdding(false); setIsEditing(false); setEditingTask(null); setNewTaskContent(''); setNewTaskTime(''); }}>
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="add-dialog"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--on-primary)' }}>
-                  {isEditing ? 'Görevi Düzenle' : `Yeni Görev ${activeTab === 'weekly' ? `(${SHORT_DAYS[selectedDay - 1]})` : ''}`}
-                </h2>
-                <button className="toolbar-button" onClick={() => { setIsAdding(false); setIsEditing(false); setEditingTask(null); setNewTaskContent(''); setNewTaskTime(''); }}><X size={20} /></button>
+          {/* Add List Dialog */}
+          <AnimatePresence>
+            {isAddingList && (
+              <div className="add-dialog-overlay" onClick={() => setIsAddingList(false)}>
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="add-dialog"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--on-primary)' }}>Yeni Liste</h2>
+                    <button className="toolbar-button" onClick={() => setIsAddingList(false)}><X size={20} /></button>
+                  </div>
+                  <form onSubmit={handleAddList} style={{ display: 'flex', gap: 12 }}>
+                    <input
+                      autoFocus
+                      className="add-input"
+                      placeholder="Liste adı..."
+                      value={newListName}
+                      onChange={(e) => setNewListName(e.target.value)}
+                    />
+                    <button type="submit" className="add-submit">
+                      <ChevronRight size={24} />
+                    </button>
+                  </form>
+                </motion.div>
               </div>
-              <form onSubmit={isEditing ? updateTask : addTask} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <textarea
-                  autoFocus
-                  className="add-input"
-                  placeholder="Görev metni..."
-                  value={newTaskContent}
-                  onChange={(e) => setNewTaskContent(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      if (isEditing) updateTask(e);
-                      else addTask(e);
-                    }
-                  }}
-                  style={{ minHeight: '100px', resize: 'vertical', fontFamily: 'inherit' }}
-                />
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <input
-                    type="time"
-                    className="add-input"
-                    style={{ flex: 'none', width: '130px' }}
-                    value={newTaskTime}
-                    onChange={(e) => setNewTaskTime(e.target.value)}
-                    title="Hatırlatma Saati"
-                  />
-                  <div style={{ flex: 1 }} />
-                  <button type="submit" className="add-submit" title={isEditing ? "Kaydet" : "Ekle"}>
-                    {isEditing ? <Check size={24} /> : <Plus size={24} />}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+            )}
+          </AnimatePresence>
 
-      {/* Add List Dialog */}
-      <AnimatePresence>
-        {isAddingList && (
-          <div className="add-dialog-overlay" onClick={() => setIsAddingList(false)}>
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="add-dialog"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--on-primary)' }}>Yeni Liste</h2>
-                <button className="toolbar-button" onClick={() => setIsAddingList(false)}><X size={20} /></button>
+          {/* Stats Modal */}
+          <AnimatePresence>
+            {isStatsOpen && (
+              <div className="add-dialog-overlay" onClick={() => setIsStatsOpen(false)}>
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="add-dialog"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                    <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--on-primary)' }}>İstatistikler</h2>
+                    <button className="toolbar-button" onClick={() => setIsStatsOpen(false)}><X size={20} /></button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <StatCard label="Toplam Görev" value={filteredTasks.length} icon={<ListTodo size={24} />} color="#E6D5C3" />
+                    <StatCard label="Tamamlanan" value={completedCount} icon={<CheckCircle2 size={24} />} color="#00BFA5" />
+                    <StatCard label="Bekleyen" value={filteredTasks.length - completedCount} icon={<Clock size={24} />} color="#FF9800" />
+                    <StatCard label="Verimlilik" value={filteredTasks.length > 0 ? `%${Math.round((completedCount / filteredTasks.length) * 100)}` : '%0'} icon={<BarChart2 size={24} />} color="#4CAF50" />
+                  </div>
+                </motion.div>
               </div>
-              <form onSubmit={handleAddList} style={{ display: 'flex', gap: 12 }}>
-                <input
-                  autoFocus
-                  className="add-input"
-                  placeholder="Liste adı..."
-                  value={newListName}
-                  onChange={(e) => setNewListName(e.target.value)}
-                />
-                <button type="submit" className="add-submit">
-                  <ChevronRight size={24} />
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+            )}
+          </AnimatePresence>
 
-      {/* Stats Modal */}
-      <AnimatePresence>
-        {isStatsOpen && (
-          <div className="add-dialog-overlay" onClick={() => setIsStatsOpen(false)}>
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="add-dialog"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--on-primary)' }}>İstatistikler</h2>
-                <button className="toolbar-button" onClick={() => setIsStatsOpen(false)}><X size={20} /></button>
+          {/* Custom Confirm Modal */}
+          <AnimatePresence>
+            {listToDelete && (
+              <div className="confirm-modal-overlay" onClick={() => setListToDelete(null)}>
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                  className="confirm-modal"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="confirm-icon-container">
+                    <Trash2 size={32} />
+                  </div>
+                  <h2 className="confirm-title">Listeyi Sil?</h2>
+                  <p className="confirm-message">
+                    <strong>"{listToDelete.name}"</strong> listesini ve içindeki tüm görevleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+                  </p>
+                  <div className="confirm-actions">
+                    <button className="confirm-btn-cancel" onClick={() => setListToDelete(null)}>Vazgeç</button>
+                    <button className="confirm-btn-delete" onClick={confirmDeleteList}>Evet, Sil</button>
+                  </div>
+                </motion.div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <StatCard label="Toplam Görev" value={filteredTasks.length} icon={<ListTodo size={24} />} color="#E6D5C3" />
-                <StatCard label="Tamamlanan" value={completedCount} icon={<CheckCircle2 size={24} />} color="#00BFA5" />
-                <StatCard label="Bekleyen" value={filteredTasks.length - completedCount} icon={<Clock size={24} />} color="#FF9800" />
-                <StatCard label="Verimlilik" value={filteredTasks.length > 0 ? `%${Math.round((completedCount / filteredTasks.length) * 100)}` : '%0'} icon={<BarChart2 size={24} />} color="#4CAF50" />
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+            )}
+          </AnimatePresence>
 
-      {/* Custom Confirm Modal */}
-      <AnimatePresence>
-        {listToDelete && (
-          <div className="confirm-modal-overlay" onClick={() => setListToDelete(null)}>
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="confirm-modal"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="confirm-icon-container">
-                <Trash2 size={32} />
+          {/* Task Delete Confirm Modal */}
+          <AnimatePresence>
+            {taskToDelete && (
+              <div className="confirm-modal-overlay" onClick={() => setTaskToDelete(null)}>
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                  className="confirm-modal"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="confirm-icon-container">
+                    <Trash2 size={32} />
+                  </div>
+                  <h2 className="confirm-title">Görevi Sil?</h2>
+                  <p className="confirm-message">
+                    Bu görevi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+                  </p>
+                  <div className="confirm-actions">
+                    <button className="confirm-btn-cancel" onClick={() => setTaskToDelete(null)}>Vazgeç</button>
+                    <button className="confirm-btn-delete" onClick={confirmDeleteTask}>Evet, Sil</button>
+                  </div>
+                </motion.div>
               </div>
-              <h2 className="confirm-title">Listeyi Sil?</h2>
-              <p className="confirm-message">
-                <strong>"{listToDelete.name}"</strong> listesini ve içindeki tüm görevleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
-              </p>
-              <div className="confirm-actions">
-                <button className="confirm-btn-cancel" onClick={() => setListToDelete(null)}>Vazgeç</button>
-                <button className="confirm-btn-delete" onClick={confirmDeleteList}>Evet, Sil</button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Task Delete Confirm Modal */}
-      <AnimatePresence>
-        {taskToDelete && (
-          <div className="confirm-modal-overlay" onClick={() => setTaskToDelete(null)}>
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="confirm-modal"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="confirm-icon-container">
-                <Trash2 size={32} />
-              </div>
-              <h2 className="confirm-title">Görevi Sil?</h2>
-              <p className="confirm-message">
-                Bu görevi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
-              </p>
-              <div className="confirm-actions">
-                <button className="confirm-btn-cancel" onClick={() => setTaskToDelete(null)}>Vazgeç</button>
-                <button className="confirm-btn-delete" onClick={confirmDeleteTask}>Evet, Sil</button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+            )}
+          </AnimatePresence>
         </>
       )}
     </div>
@@ -979,16 +979,16 @@ function ReorderItemWrapper({ task, index, onToggle, onDelete, onTogglePin, onEd
   const dragControls = useDragControls();
 
   return (
-    <Reorder.Item 
+    <Reorder.Item
       value={task}
       dragListener={false}
       dragControls={dragControls}
       onDragEnd={onDragEnd}
     >
-      <TaskCard 
-        task={task} 
-        index={index} 
-        onToggle={onToggle} 
+      <TaskCard
+        task={task}
+        index={index}
+        onToggle={onToggle}
         onDelete={onDelete}
         onTogglePin={onTogglePin}
         onEdit={onEdit}
@@ -1011,7 +1011,7 @@ function TaskCard({ task, index, onToggle, onDelete, onTogglePin, onEdit, dragCo
         className="priority-bar"
         style={{ backgroundColor: task.priority === 2 ? 'var(--priority-high)' : task.priority === 1 ? 'var(--priority-medium)' : 'var(--priority-low)' }}
       />
-      <span 
+      <span
         className="task-number"
         onPointerDown={(e) => dragControls.start(e)}
         title="Taşımak için sürükleyin"
@@ -1035,8 +1035,8 @@ function TaskCard({ task, index, onToggle, onDelete, onTogglePin, onEdit, dragCo
 
       {task.time && <span className="task-time" title="Hatırlatma Saati">{task.time}</span>}
 
-      <button 
-        className="edit-btn" 
+      <button
+        className="edit-btn"
         onClick={() => onEdit(task)}
         title="Düzenle"
         style={{ background: 'none', border: 'none', color: 'var(--primary-variant)', cursor: 'pointer', padding: 4, opacity: 0.3, transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -1044,8 +1044,8 @@ function TaskCard({ task, index, onToggle, onDelete, onTogglePin, onEdit, dragCo
         <PlusCircle size={18} style={{ transform: 'rotate(45deg)' }} />
       </button>
 
-      <button 
-        className={`pin-btn ${task.isPinned ? 'active' : ''}`} 
+      <button
+        className={`pin-btn ${task.isPinned ? 'active' : ''}`}
         onClick={() => onTogglePin(task)}
         title={task.isPinned ? "Pini Kaldır" : "Pinle (Üste Sabitle)"}
       >
@@ -1073,7 +1073,7 @@ function ListItem({ list, currentListId, setCurrentListId, setSidebarOpen, handl
   const dragControls = useDragControls();
 
   return (
-    <Reorder.Item 
+    <Reorder.Item
       value={list}
       dragListener={false}
       dragControls={dragControls}
@@ -1082,8 +1082,8 @@ function ListItem({ list, currentListId, setCurrentListId, setSidebarOpen, handl
     >
       <div className={`list-item-container ${currentListId === list.id ? 'active' : ''}`}>
         {list.id !== 'default' && (
-          <div 
-            className="drag-handle" 
+          <div
+            className="drag-handle"
             onPointerDown={(e) => dragControls.start(e)}
             style={{ paddingLeft: 8, cursor: 'grab', color: 'var(--primary-variant)', display: 'flex', alignItems: 'center' }}
           >
