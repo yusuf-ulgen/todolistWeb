@@ -277,7 +277,7 @@ export default function App() {
         sortOrder: tasks.length,
         listId: currentListId,
         priority: 0,
-        weekday: activeTab === 'weekly' ? selectedDay : null,
+        weekday: currentListId === 'default' && activeTab === 'weekly' ? selectedDay : null,
         notified: false
       };
 
